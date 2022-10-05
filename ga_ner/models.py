@@ -1018,7 +1018,7 @@ class GANER:
 
         # Group individuals by cosine similarity
         num_members: np.ndarray = np.zeros(
-            population.shape[0] + offspring_population.shape[0], dtype=np.int32
+            population.shape[0] + offspring_population.shape[0], dtype=np.float64
         )
         population[:, 1] = -100
         offspring_population[:, 1] = -100
@@ -1026,46 +1026,38 @@ class GANER:
         index_start_ind = 3
         for index in range(population.shape[0]):
             for index2 in range(0, population.shape[0]):
-                if (
-                    cosine_similarity(
-                        population[index, index_start_ind:],
-                        population[index2, index_start_ind:],
-                    )
-                    > self.threshold
-                ):
-                    num_members[index] += 1
+                simil = cosine_similarity(
+                    population[index, index_start_ind:],
+                    population[index2, index_start_ind:],
+                )
+                if simil > self.threshold:
+                    num_members[index] += simil
 
             for index2 in range(0, offspring_population.shape[0]):
-                if (
-                    cosine_similarity(
-                        population[index, index_start_ind:],
-                        offspring_population[index2, index_start_ind:],
-                    )
-                    > self.threshold
-                ):
-                    num_members[index] += 1
+                simil = cosine_similarity(
+                    population[index, index_start_ind:],
+                    offspring_population[index2, index_start_ind:],
+                )
+                if simil > self.threshold:
+                    num_members[index] += simil
 
         offset = population.shape[0]
         for index in range(offspring_population.shape[0]):
             for index2 in range(offspring_population.shape[0]):
-                if (
-                    cosine_similarity(
-                        offspring_population[index, index_start_ind:],
-                        offspring_population[index2, index_start_ind:],
-                    )
-                    > self.threshold
-                ):
-                    num_members[index + offset] += 1
+                simil = cosine_similarity(
+                    offspring_population[index, index_start_ind:],
+                    offspring_population[index2, index_start_ind:],
+                )
+                if simil > self.threshold:
+                    num_members[index + offset] += simil
 
             for index2 in range(population.shape[0]):
-                if (
-                    cosine_similarity(
-                        offspring_population[index, index_start_ind:],
-                        population[index2, index_start_ind:],
-                    )
-                    > self.threshold
-                ):
-                    num_members[index + offset] += 1
+                simil = cosine_similarity(
+                    offspring_population[index, index_start_ind:],
+                    population[index2, index_start_ind:],
+                )
+                if simil > self.threshold:
+                    num_members[index + offset] += simil
 
         population_fitness[:] = (
             population_fitness[:] / num_members[: population.shape[0]]
@@ -1178,9 +1170,9 @@ class GANER:
                         parent_population[index_accept, :] = parent_population[
                             index_migration
                         ].copy()
-                        # population_fitness[index_accept] = population_fitness[
-                        #     index_migration
-                        # ]
+                        population_fitness[index_accept] = population_fitness[
+                            index_migration
+                        ].copy()
 
             mean_fitness = population_fitness.mean()
             max_curr_fitness = population_fitness.max()

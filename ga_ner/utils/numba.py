@@ -83,7 +83,9 @@ def perfomance_by_doc(
     if intercep_doc / retrive_doc > 1:
         print(intercep_doc / retrive_doc, intercep_doc, retrive_doc)
 
-    return intercep_doc / retrive_doc * np.log2(individual_size)
+    return (intercep_doc / retrive_doc) * np.log2(intercep_doc)
+
+    # return intercep_doc / retrive_doc * np.log2(individual_size)
 
 
 @njit(cache=True)
