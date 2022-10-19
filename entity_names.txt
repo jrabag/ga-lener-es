@@ -2,4 +2,3 @@ PER
 MISC
 ORG
 LOC
-ALL

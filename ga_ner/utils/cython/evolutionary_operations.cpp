@@ -81,7 +81,7 @@ float perfomance_by_doc(
         return 0.0;
     }
 
-    return (float)intercepDoc / retriveDoc;
+    return (float)intercepDoc / retriveDoc * log2(retriveDoc + 0.0001);
 }
 
 float fitness_by_individual(
