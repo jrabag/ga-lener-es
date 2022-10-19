@@ -1,20 +1,18 @@
 """Numba models."""
 from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 from functools import cached_property, lru_cache
 from itertools import product
-from typing import TYPE_CHECKING, Dict, Iterable, List, Tuple, Union
-import pytorch_lightning as pl
-from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Callable, Dict, Iterable, List, Tuple, Union
 
 import numpy as np
+import pytorch_lightning as pl
 import spacy
 from spacy.tokens import Span
-
-from ga_ner.linguistic_features import dep_tags, pos_tags
-
 from tqdm.auto import tqdm, trange
 
-from ga_ner.utils.numba import perfomance_by_doc, slice_doc, cosine_similarity
+from ga_ner.linguistic_features import dep_tags, pos_tags
+from ga_ner.utils.numba import perfomance_by_doc, slice_doc
 
 if TYPE_CHECKING:
     from spacy.tokens import Doc as SpacyDoc
@@ -685,67 +683,9 @@ class GANER:
     population_fitness: np.ndarray = None
     random_state: int = None
     threshold: float = 0.5
-
-    def slice_doc(
-        self, doc: np.ndarray, target: np.ndarray, windows: int, doc_size
-    ) -> Tuple[np.ndarray, np.ndarray]:
-        """Generate slice of doc."""
-        for slice_doc_, slice_target_ in slice_doc(doc, target, windows, doc_size):
-            yield slice_doc_, slice_target_
-
-    def perfomance_by_doc(
-        self,
-        individual: np.ndarray,
-        doc: np.ndarray,
-        target: np.ndarray,
-        doc_size: int,
-        individual_size: int,
-    ):
-        """Performance of individual on doc."""
-        return perfomance_by_doc(
-            individual,
-            doc,
-            target,
-            doc_size,
-            individual_size,
-            self.unknown_id,
-        )
-
-    def fitness_by_individual(self, individual: np.ndarray) -> float:
-        """Fitness function.
-        Return fitness of individual.
-        F1 score
-        F(R) = frac{2*S_p*S_r,S_p + S_r)
-        """
-        entity_type = self.map_inv_entity[individual[2]]
-        perfomance_doc = np.zeros(len(self.data[entity_type]["input"]))
-        individual_size = individual[0]
-        indivual_rep = individual[3:]
-
-        for index_doc, doc in enumerate(self.data[entity_type]["input"]):
-            perfomance = self.perfomance_by_doc(
-                indivual_rep,
-                doc,
-                self.data[entity_type]["target"][index_doc],
-                self.data[entity_type]["meta"][index_doc, 0],
-                individual_size,
-            )
-            perfomance_doc[index_doc] = perfomance
-
-        # if perfomance_doc[perfomance_doc >= 0].mean() > 1:
-        #     print(perfomance_doc[perfomance_doc >= 0].mean())
-        return perfomance_doc[perfomance_doc >= 0].mean()
-
-    def fitness(self, population: np.ndarray) -> np.ndarray:
-        """Fitness function.
-        Return fitness of population.
-        F1 score
-        F(R) = frac{2*S_p*S_r,S_p + S_r)
-        """
-        return np.array(
-            [self.fitness_by_individual(individual) for individual in population],
-            dtype=np.float32,
-        )
+    select: Callable = None
+    fitness: Callable = None
+    num_threads: int = None
 
     def create_gen(self, cromosome: np.ndarray):
         """Create gen.
@@ -753,13 +693,15 @@ class GANER:
         Select gen with ramdom with probability distribution.
         is_entity: True if gen is entity. If it's False the value gen is negative.
         """
-        from torch.utils.data import DataLoader
         import torch
+        from torch.utils.data import DataLoader
 
         batch_size = 32
         prob_list = self.ml_model.predict(
             self.ml_model.model,
-            DataLoader(torch.from_numpy(cromosome), batch_size=batch_size),
+            DataLoader(
+                torch.from_numpy(cromosome.astype(np.int)), batch_size=batch_size
+            ),
         )
         gen_arr = np.empty(cromosome.shape[0], dtype=np.int)
 
@@ -804,12 +746,14 @@ class GANER:
             population[filter_add_mask, 2] = entity_types[filter_add_mask]
 
         # Create genes to first feature is mask
-        filter_create_gene = np.where(population[:, 3] == self.mask_id, True, False)
+        filter_create_gene = np.where(
+            population[:, 3] == self.mask_id, True, False
+        ).astype(int)
         population[filter_create_gene, 3] = self.create_gen(
             population[filter_create_gene, 3:4]
         )
         # Calculate fitness
-        population_fitness[:] = self.fitness(population)[:]
+        population_fitness[:] = self._fitness(population)[:]
         return population_fitness
 
     def mutate(
@@ -825,7 +769,7 @@ class GANER:
         """
         try:
             # TODO Model to select operation given it improves performance.
-            size_individual = individual[0]
+            size_individual: int = int(individual[0])
             # 0 = add, 1 = remove, 2 = change 3 = change first, 4 = change last 5 = remove first, 6 = remove last
             operation = np.random.randint(0, 3)
             index_feature = 0
@@ -875,7 +819,7 @@ class GANER:
                 raise
 
             if operation in [0, 2]:
-                new_size: int = individual1[0] + 3
+                new_size: int = int(individual1[0]) + 3
                 individual1[index_feature] = self.mask_id
                 gen = self.create_gen(np.abs(individual1[3:new_size]).reshape(1, -1))
                 individual1[index_feature] = gen
@@ -896,8 +840,8 @@ class GANER:
         """
         max_len = min(individual1[0], individual2[0])
         point_crossover = 3 + 1
-        individual1_new = np.zeros(individual1.shape, dtype=np.int32)
-        individual2_new = np.zeros(individual2.shape, dtype=np.int32)
+        individual1_new = np.zeros(individual1.shape, dtype=np.float32)
+        individual2_new = np.zeros(individual2.shape, dtype=np.float32)
         if max_len > 1:
             point_crossover = np.random.randint(1, max_len) + 3
 
@@ -911,168 +855,16 @@ class GANER:
         individual2_new[0] = (individual2_new[3:] != 0).sum()
         return individual1_new, individual2_new
 
-    def best_generation(
-        self,
-        population: np.ndarray,
-        population_fitness: np.ndarray,
-        offspring_population: np.ndarray,
-        offspring_population_fitness: np.ndarray,
-        n_population: int,
-    ):
-        """Get best generation.
-        Get best population from population and offspring by fitness.
-        Similat to tournament selection.
-
-        """
-
-        def swap_fitness(
-            population: np.ndarray,
-            population_fitness: np.ndarray,
-            index: int,
-            population2: np.ndarray,
-            population2_fitness: np.ndarray,
-            index2: int,
-        ):
-            temp_swap = population[index].copy()
-            temp_swap_fitness = population_fitness[index]
-            population[index] = population2[index2].copy()
-            population_fitness[index] = population2_fitness[index2]
-            population2[index2] = temp_swap
-            population2_fitness[index2] = temp_swap_fitness
-
-        for index in range(n_population):
-            # Horizontal swap
-            if index + 1 < n_population:
-                if population_fitness[index] < population_fitness[index + 1]:
-                    swap_fitness(
-                        population,
-                        population_fitness,
-                        index,
-                        population,
-                        population_fitness,
-                        index + 1,
-                    )
-                if (
-                    offspring_population_fitness[index]
-                    > offspring_population_fitness[index + 1]
-                ):
-                    swap_fitness(
-                        offspring_population,
-                        offspring_population_fitness,
-                        index,
-                        offspring_population,
-                        offspring_population_fitness,
-                        index + 1,
-                    )
-                if (
-                    offspring_population_fitness[index + n_population]
-                    > offspring_population_fitness[index + n_population + 1]
-                ):
-                    swap_fitness(
-                        offspring_population,
-                        offspring_population_fitness,
-                        index + n_population,
-                        offspring_population,
-                        offspring_population_fitness,
-                        index + n_population + 1,
-                    )
-            # Vertical swap
-            if population_fitness[index] < offspring_population_fitness[index]:
-                swap_fitness(
-                    population,
-                    population_fitness,
-                    index,
-                    offspring_population,
-                    offspring_population_fitness,
-                    index,
-                )
-            if (
-                population_fitness[index]
-                < offspring_population_fitness[index + n_population]
-            ):
-                swap_fitness(
-                    population,
-                    population_fitness,
-                    index,
-                    offspring_population,
-                    offspring_population_fitness,
-                    index + n_population,
-                )
-
-    def select(
-        self,
-        population: np.ndarray,
-        population_fitness: np.ndarray,
-        offspring_population: np.ndarray,
-        offspring_population_fitness: np.ndarray,
-        n_population: int,
-    ) -> np.ndarray:
-        """Select individuals.
-        1. Get best individuals from population and offspring.
-        2. Group individuals by cosine similarity
-            1. If cosine similarity is higher than {threshold}, add to group
-            2. If cosine similarity is lower than {threshold}, create new group
-            3. if a group has less than {min_individual} individuals, add to most similar group
-        3. Select best individuals from each group
-        """
-
-        # Group individuals by cosine similarity
-        num_members: np.ndarray = np.zeros(
-            population.shape[0] + offspring_population.shape[0], dtype=np.float64
-        )
-        population[:, 1] = -100
-        offspring_population[:, 1] = -100
-        # Fitness shared using cosine similarity
-        index_start_ind = 3
-        for index in range(population.shape[0]):
-            for index2 in range(0, population.shape[0]):
-                simil = cosine_similarity(
-                    population[index, index_start_ind:],
-                    population[index2, index_start_ind:],
-                )
-                if simil > self.threshold:
-                    num_members[index] += simil
-
-            for index2 in range(0, offspring_population.shape[0]):
-                simil = cosine_similarity(
-                    population[index, index_start_ind:],
-                    offspring_population[index2, index_start_ind:],
-                )
-                if simil > self.threshold:
-                    num_members[index] += simil
-
-        offset = population.shape[0]
-        for index in range(offspring_population.shape[0]):
-            for index2 in range(offspring_population.shape[0]):
-                simil = cosine_similarity(
-                    offspring_population[index, index_start_ind:],
-                    offspring_population[index2, index_start_ind:],
-                )
-                if simil > self.threshold:
-                    num_members[index + offset] += simil
-
-            for index2 in range(population.shape[0]):
-                simil = cosine_similarity(
-                    offspring_population[index, index_start_ind:],
-                    population[index2, index_start_ind:],
-                )
-                if simil > self.threshold:
-                    num_members[index + offset] += simil
-
-        population_fitness[:] = (
-            population_fitness[:] / num_members[: population.shape[0]]
-        )
-        offspring_population_fitness[:] = (
-            offspring_population_fitness[:] / num_members[population.shape[0] :]
-        )
-
-        self.best_generation(
+    def _fitness(self, population: np.ndarray) -> np.ndarray:
+        """Calculate fitness of individual."""
+        return self.fitness(
             population,
-            population_fitness,
-            offspring_population,
-            offspring_population_fitness,
-            n_population,
-        )
+            self.data["ALL"]["input"],
+            self.data["ALL"]["target"][0],
+            self.data["ALL"]["meta"],
+            self.unknown_id,
+            self.num_threads,
+        ).base
 
     def train_step(
         self,
@@ -1101,8 +893,8 @@ class GANER:
             index_population += 1
 
         # Calculate fitness of offspring
-        offspring_fitness[:] = self.fitness(offspring_population)[:]
-        population_fitness[:] = self.fitness(parent_population)[:]
+        offspring_fitness[:] = self._fitness(offspring_population)[:]
+        population_fitness[:] = self._fitness(parent_population)[:]
 
         self.select(
             parent_population,
@@ -1110,21 +902,34 @@ class GANER:
             offspring_population,
             offspring_fitness,
             n_population,
+            threshold=self.threshold,
+            num_threads=self.num_threads,
         )
 
         return parent_population
 
-    def train(self, max_iter: int, tol=10, *, base_population=None, num_islands=1):
+    def train(
+        self,
+        max_iter: int,
+        tol=10,
+        *,
+        base_population=None,
+        num_islands=1,
+        num_threads=1,
+    ):
         """Train step model.
         max_iter: maximum number of iterations.
         """
+        self.num_threads = num_threads
         np.random.seed(self.random_state)
 
-        parent_population = np.zeros((self.n_population, self.max_len), dtype=np.int32)
+        parent_population = np.zeros(
+            (self.n_population, self.max_len), dtype=np.float32
+        )
         population_fitness = np.zeros((self.n_population,), dtype=np.float32)
         self.init_population(parent_population, population_fitness, base_population)
         # Variables to control the convergence
-        self.population = np.zeros((self.n_population, self.max_len), dtype=np.int32)
+        self.population = np.zeros((self.n_population, self.max_len), dtype=np.float32)
         best_fitness = 0
         n_not_improve = 0
         mean_best_fitness = 0
@@ -1132,7 +937,7 @@ class GANER:
         pbar = trange(max_iter)
         for i in pbar:
             offspring_population = np.zeros(
-                (self.n_population * 2, self.max_len), dtype=np.int32
+                (self.n_population * 2, self.max_len), dtype=np.float32
             )
             offspring_fitness = np.zeros((self.n_population * 2,), dtype=np.float32)
 
@@ -1198,7 +1003,7 @@ class GANER:
         self.population = np.unique(self.population, axis=0)
         # remove if all are less than 0
         self.population = self.population[self.population[:, 0] > 0]
-        self.population_fitness = self.fitness(self.population)
+        self.population_fitness = self._fitness(self.population)
         np.save(
             f"best_population.npy",
             self.population[self.population_fitness > 0],

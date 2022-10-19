@@ -19,3 +19,7 @@
 ## OOV
 
 Use UNK token for OOV.
+
+```bash
+python setup.py build_ext --inplace
+```
