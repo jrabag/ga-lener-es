@@ -782,7 +782,7 @@ class GANER:
                 operation = 1
                 index_feature = self.max_len - 1
 
-            if operation == 0 and size_individual + 3 < self.max_len:
+            if operation == 0:
                 size_individual += 1
 
             if not index_feature:
@@ -792,29 +792,23 @@ class GANER:
                 if operation == 0:
                     individual1[0] = size_individual
                     individual2[0] = size_individual
-                    next_val = individual[index_feature]
-                    for index in range(index_feature, 3 + size_individual):
-                        if index != index_feature:
-                            individual1[index] = next_val
-                            individual2[index] = next_val
-                            if index + 1 < self.max_len:
-                                next_val = individual[index + 1]
 
-                elif operation == 1:
-
-                    individual1[0] = size_individual - 1
-                    individual2[0] = size_individual - 1
-                    if index_feature + 1 < self.max_len:
-                        next_val = individual[index_feature + 1]
-                    else:
-                        next_val = 0
-                    for index in range(index_feature, 3 + size_individual):
+                    for index in range(3 + size_individual - 1, index_feature, -1):
+                        next_val = individual[index - 1]
                         individual1[index] = next_val
                         individual2[index] = next_val
-                        if index + 1 < self.max_len:
-                            next_val = individual[index + 1]
-                    individual1[3 + size_individual - 1] = 0
-                    individual2[3 + size_individual - 1] = 0
+
+                elif operation == 1:
+                    size_individual -= 1
+                    individual1[0] = size_individual
+                    individual2[0] = size_individual
+                    for index in range(index_feature, 3 + size_individual):
+                        next_val = individual[index + 1]
+                        individual1[index] = next_val
+                        individual2[index] = next_val
+
+                    individual1[3 + size_individual] = 0
+                    individual2[3 + size_individual] = 0
             except IndexError:
                 raise
 
@@ -878,7 +872,7 @@ class GANER:
         max_iter: maximum number of iterations.
         """
         index_population = 0
-        index_offspring = 0
+        index_offspring = n_population
 
         while index_population < n_population:
             individual_selected = parent_population[index_population]
@@ -886,10 +880,10 @@ class GANER:
             individual2 = individual_selected.copy()
             self.mutate(individual_selected, individual1, individual2)
 
-            offspring_population[index_offspring] = individual1
-            offspring_population[index_offspring + 1] = individual2
+            offspring_population[index_population] = individual1
+            offspring_population[index_offspring] = individual2
 
-            index_offspring += 2
+            index_offspring += 1
             index_population += 1
 
         # Calculate fitness of offspring
