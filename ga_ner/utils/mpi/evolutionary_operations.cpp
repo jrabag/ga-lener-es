@@ -696,7 +696,7 @@ void read_file(
 {
     // Read input file
     std::fstream file;
-    file.open("../../../data/train/input.txt", std::ios::in);
+    file.open("data/train/input.txt", std::ios::in);
 
     int i = 0;
     int j;
@@ -731,7 +731,7 @@ void read_file(
     file.close();
     // Read target file
     std::fstream file2;
-    file2.open("../../../data/train/target.txt", ios::in);
+    file2.open("data/train/target.txt", ios::in);
     i = 0;
     // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
     while (getline(file2, document))
@@ -753,7 +753,7 @@ void read_file(
     file2.close();
     // Read meta file
     std::fstream file3;
-    file3.open("../../../data/train/metadata.txt", ios::in);
+    file3.open("data/train/metadata.txt", ios::in);
     i = 0;
     // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
     while (getline(file3, document))
@@ -801,7 +801,7 @@ int main(int argc, char *argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &totalThreads);
     if (iam == 0)
     {
-        timeFile.open("../../../data/rules/mpi/time.txt", std::ios_base::app);
+        timeFile.open("data/rules/mpi/time.txt", std::ios_base::app);
     }
 
     starttime = MPI_Wtime();
@@ -1178,7 +1178,7 @@ int main(int argc, char *argv[])
             }
         }
         // Save in file individual with fitness > 0
-        string populationFilename = "../../../data/rules/mpi/population_" + to_string(totalThreads) + ".txt";
+        string populationFilename = "data/rules/mpi/population_" + to_string(totalThreads) + ".txt";
         FILE *fpopulation = fopen(populationFilename.c_str(), "w");
         for (int i = 0; i < population_size; i++)
         {
