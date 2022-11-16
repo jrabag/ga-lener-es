@@ -789,14 +789,22 @@ int main(int argc, char *argv[])
     int max_iter = 1000;
     int tol = 0;
     int maxTolerance = 15;
-    int minIter = 300;
     int numIslands = 8;
     int migrationRate = 10;
+    double starttime, endtime;
+    // Write time to file. Append to file
+    std::ofstream timeFile;
 
     MPI_Status status;
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &iam);
     MPI_Comm_size(MPI_COMM_WORLD, &totalThreads);
+    if (iam == 0)
+    {
+        timeFile.open("../../../data/rules/mpi/time.txt", std::ios_base::app);
+    }
+
+    starttime = MPI_Wtime();
 
     srand(42 + iam);
     // MPI_Scatterv
@@ -885,50 +893,51 @@ int main(int argc, char *argv[])
             h_fitness[i] = 0;
         }
 
+        // Flatten data
+
+        // Copy population host
+        for (int i = 0; i < population_size; i++)
+        {
+            for (int j = 0; j < populationDim; j++)
+            {
+                h_population[i * populationDim + j] = population[start + i][j];
+            }
+        }
+
+        // Copy docs host
+        for (int i = 0; i < docs_count; i++)
+        {
+            for (int j = 0; j < docLen; j++)
+            {
+                for (int k = 0; k < docsDim; k++)
+                {
+                    h_docs[i * docsDim * docLen + j * docsDim + k] = docs[i][j][k];
+                }
+            }
+        }
+        printf("Docs copied\n");
+        // Copy targets host
+        for (int i = 0; i < docs_count; i++)
+        {
+            for (int j = 0; j < docLen; j++)
+            {
+                h_targets[i * docLen + j] = targets[i][j];
+            }
+        }
+        printf("Targets copied\n");
+        // Copy meta host
+        for (int i = 0; i < docs_count; i++)
+        {
+            for (int j = 0; j < metaDim; j++)
+            {
+                h_meta[i * metaDim + j] = meta[i][j];
+            }
+        }
+
+        printf("Meta copied\n");
+
         for (i = 1; i < totalThreads; i++)
         {
-            // Flatten data
-
-            // Copy population host
-            for (int i = 0; i < population_size; i++)
-            {
-                for (int j = 0; j < populationDim; j++)
-                {
-                    h_population[i * populationDim + j] = population[start + i][j];
-                }
-            }
-
-            // Copy docs host
-            for (int i = 0; i < docs_count; i++)
-            {
-                for (int j = 0; j < docLen; j++)
-                {
-                    for (int k = 0; k < docsDim; k++)
-                    {
-                        h_docs[i * docsDim * docLen + j * docsDim + k] = docs[i][j][k];
-                    }
-                }
-            }
-            printf("Docs copied\n");
-            // Copy targets host
-            for (int i = 0; i < docs_count; i++)
-            {
-                for (int j = 0; j < docLen; j++)
-                {
-                    h_targets[i * docLen + j] = targets[i][j];
-                }
-            }
-            printf("Targets copied\n");
-            // Copy meta host
-            for (int i = 0; i < docs_count; i++)
-            {
-                for (int j = 0; j < metaDim; j++)
-                {
-                    h_meta[i * metaDim + j] = meta[i][j];
-                }
-            }
-
-            printf("Meta copied\n");
 
             MPI_Send(
                 h_docs,
@@ -1016,12 +1025,8 @@ int main(int argc, char *argv[])
 
     float *population2 = new float[populationPerProcess * populationDim * 2];
     float *fitness2 = new float[populationPerProcess * 2];
-    float globalAvgFitness = 0;
-    float globalCurAvgFitness = 0;
-    float localAvgCurrentFitness = 0;
-    bool stop = false;
 
-    for (int iteration = 0; iteration < max_iter && !stop; iteration++)
+    for (int iteration = 0; iteration < max_iter; iteration++)
     {
         train(
             s_population,
@@ -1040,83 +1045,6 @@ int main(int argc, char *argv[])
             metaDim,
             end - start,
             start);
-
-        // Avg fitness
-        for (int i = 0; i < populationPerProcess; i++)
-        {
-            localAvgCurrentFitness += s_fitness[i];
-        }
-        localAvgCurrentFitness /= populationPerProcess;
-        MPI_Allreduce(
-            &localAvgCurrentFitness,
-            &globalAvgFitness,
-            1,
-            MPI_FLOAT,
-            MPI_SUM,
-            MPI_COMM_WORLD);
-
-        globalAvgFitness /= totalThreads;
-        if (globalAvgFitness > globalCurAvgFitness)
-        {
-            globalCurAvgFitness = globalAvgFitness;
-            tol = 0;
-            MPI_Gatherv(
-                s_fitness,
-                populationPerProcess,
-                MPI_FLOAT,
-                h_fitness,
-                sendcountsFitness,
-                displsFitness,
-                MPI_FLOAT,
-                0,
-                MPI_COMM_WORLD);
-
-            MPI_Gatherv(
-                s_population,
-                populationPerProcess * populationDim,
-                MPI_FLOAT,
-                h_population,
-                sendcounts,
-                displs,
-                MPI_FLOAT,
-                0,
-                MPI_COMM_WORLD);
-
-            // Copy data from h_population to population
-            MPI_Barrier(MPI_COMM_WORLD);
-            if (iam == 0)
-            {
-                for (int i = 0; i < population_size; i++)
-                {
-                    for (int j = 0; j < populationDim; j++)
-                    {
-                        population[i][j] = h_population[i * populationDim + j];
-                    }
-                }
-                // Save in file individual with fitness > 0
-                FILE *fpopulation = fopen("../../../data/rules/mpi/population.txt", "w");
-                for (int i = 0; i < population_size; i++)
-                {
-                    if (h_fitness[i] > 0)
-                    {
-                        for (int j = 0; j < populationDim; j++)
-                        {
-                            fprintf(fpopulation, "%d ", (int)h_population[i * populationDim + j]);
-                        }
-                        fprintf(fpopulation, "\n");
-                    }
-                }
-                fclose(fpopulation);
-            }
-        }
-        else
-        {
-            if (tol > maxTolerance && iteration > minIter)
-            {
-                stop = true;
-            }
-            tol++;
-        }
 
         // printf("iam %d iteration %d\n", iam, iteration);
         if (iteration % migrationRate == 0 && migrationRate > 0 && iteration > 1 && numIslands > 1)
@@ -1213,15 +1141,6 @@ int main(int argc, char *argv[])
                 }
             }
         }
-
-        // print s_population
-        // for (int i = 0; i < populationPerProcess; i++)
-        // {
-        //     for (int j = 0; j < populationDim; j++)
-        //     {
-        //         printf("%d ", (int)s_population[i * populationDim + j]);
-        //     }
-        //     printf("\n");
     }
 
     MPI_Gatherv(
@@ -1248,41 +1167,44 @@ int main(int argc, char *argv[])
 
     // Copy data from h_population to population
     MPI_Barrier(MPI_COMM_WORLD);
+    endtime = MPI_Wtime();
     if (iam == 0)
     {
-
-        // for (int i = 0; i < population_size; i++)
-        // {
-        //     for (int j = 0; j < populationDim; j++)
-        //     {
-        //         population[i][j] = h_population[i * populationDim + j];
-        //     }
-        // }
-        printf("\n");
+        for (int i = 0; i < population_size; i++)
+        {
+            for (int j = 0; j < populationDim; j++)
+            {
+                population[i][j] = h_population[i * populationDim + j];
+            }
+        }
         // Save in file individual with fitness > 0
-        // FILE *fpopulation = fopen("population.txt", "w");
+        string populationFilename = "../../../data/rules/mpi/population_" + to_string(totalThreads) + ".txt";
+        FILE *fpopulation = fopen(populationFilename.c_str(), "w");
+        for (int i = 0; i < population_size; i++)
+        {
+            if (h_fitness[i] > 0)
+            {
+                for (int j = 0; j < populationDim; j++)
+                {
+                    fprintf(fpopulation, "%d ", (int)h_population[i * populationDim + j]);
+                }
+                fprintf(fpopulation, "\n");
+            }
+        }
+        fclose(fpopulation);
+    }
+
+    // Copy data from h_population to population
+
+    if (iam == 0)
+    {
+        timeFile << totalThreads << "," << endtime - starttime << endl;
+        printf("\n");
         for (int i = 0; i < population_size; i++)
         {
             printf("%.6f ", h_fitness[i]);
-            // if (h_fitness[i] > 0)
-            // {
-            //     for (int j = 0; j < populationDim; j++)
-            //     {
-            //         fprintf(fpopulation, "%d ", (int)h_population[i * populationDim + j]);
-            //     }
-            //     fprintf(fpopulation, "\n");
-            // }
         }
         printf("\n");
-        // print population
-        // for (int i = 0; i < population_size; i++)
-        // {
-        //     for (int j = 0; j < populationDim; j++)
-        //     {
-        //         printf("%d  ", (int)population[i][j]);
-        //     }
-        //     printf("\n");
-        // }
     }
     MPI_Finalize();
     return 0;
