@@ -4,6 +4,5 @@ __pycache__
 checkpoints
 lightning_logs
 **.npy
-**.cu*
 Weak**.ipynb
 **Predic**.ipynb

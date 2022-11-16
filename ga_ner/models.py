@@ -661,6 +661,56 @@ class Corpus:
             vocab_ent=kwargs.get("vocab_ent"),
         )
 
+    def to_text_array(
+        self,
+        entity_label: str = None,
+        exclude_label=False,
+        max_size_doc: int = 172,
+        input_filename="input.txt",
+        target_filename="target.txt",
+        metadata_filename="metadata.txt",
+        encoding="utf-8",
+    ):
+        """Create files with text from documents.
+        Create a file to inputs, targets and other file to metadata.
+        """
+        with open(input_filename, "w", encoding=encoding) as input_file, open(
+            target_filename, "w", encoding=encoding
+        ) as target_file, open(
+            metadata_filename, "w", encoding=encoding
+        ) as metadata_file:
+            for _, document in enumerate(self.documents):
+
+                if len(document.entities) == 0:
+                    continue
+
+                document_array = document.to_array(entity_label, exclude_label).reshape(
+                    -1, 4
+                )
+                max_size = min(max_size_doc, document_array.shape[0])
+
+                input_data = np.zeros((max_size_doc, 3), dtype=np.float32)
+                target = np.zeros((max_size_doc, 1), dtype=np.int32)
+                meta = np.zeros((4), dtype=np.float32)
+
+                meta[:] = document_array[0]
+                input_data[: max_size - 1] = document_array[1:max_size, :3]
+                target[: max_size - 1] = document_array[1:max_size, 3:]
+
+                for line in input_data:
+                    input_file.write(",".join([str(x) for x in line]))
+                    input_file.write(" ")
+
+                for line in target:
+                    target_file.write(str(line[0]))
+                    target_file.write(" ")
+
+                metadata_file.write(",".join([str(x) for x in meta]))
+
+                input_file.write("\n")
+                target_file.write("\n")
+                metadata_file.write("\n")
+
 
 @dataclass
 class GANER:
@@ -872,7 +922,6 @@ class GANER:
         max_iter: maximum number of iterations.
         """
         index_population = 0
-        index_offspring = n_population
 
         while index_population < n_population:
             individual_selected = parent_population[index_population]
@@ -880,10 +929,9 @@ class GANER:
             individual2 = individual_selected.copy()
             self.mutate(individual_selected, individual1, individual2)
 
-            offspring_population[index_population] = individual1
-            offspring_population[index_offspring] = individual2
+            offspring_population[index_population * 2] = individual1
+            offspring_population[index_population * 2 + 1] = individual2
 
-            index_offspring += 1
             index_population += 1
 
         # Calculate fitness of offspring
@@ -924,16 +972,16 @@ class GANER:
         self.init_population(parent_population, population_fitness, base_population)
         # Variables to control the convergence
         self.population = np.zeros((self.n_population, self.max_len), dtype=np.float32)
-        best_fitness = 0
         n_not_improve = 0
         mean_best_fitness = 0
         i = 0
         pbar = trange(max_iter)
+        offspring_population = np.zeros(
+            (self.n_population * 2, self.max_len), dtype=np.float32
+        )
+        offspring_fitness = np.zeros((self.n_population * 2,), dtype=np.float32)
+
         for i in pbar:
-            offspring_population = np.zeros(
-                (self.n_population * 2, self.max_len), dtype=np.float32
-            )
-            offspring_fitness = np.zeros((self.n_population * 2,), dtype=np.float32)
 
             step_range = self.n_population // num_islands
             for index_island in range(0, self.n_population, step_range):

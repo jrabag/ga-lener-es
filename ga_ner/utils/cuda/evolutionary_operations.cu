@@ -11,12 +11,115 @@
 #include <curand.h>
 #include <curand_kernel.h>
 
+#include <string.h>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+using namespace std;
+
+#define NUM_TAGS 4
+#define POS_SIZE 19
+#define DEP_SIZE 62
+#define WORD_SIZE 2703
+#define VOCAB_SIZE 2784
+#define UNK_ID 2781
+
 // Function to generate random numbers in given range
 __host__ int random_num(int start, int end)
 {
     int range = (end - start) + 1;
     int random_int = range > 0 ? start + (rand() % range) : start;
     return random_int;
+}
+
+void read_file(
+    float ***docs,
+    int **targets,
+    float **meta,
+    int docsDim,
+    int docLen,
+    int metaDim,
+    int docs_count)
+{
+    // Read input file
+    std::fstream file;
+    file.open("../../../data/train/input.txt", std::ios::in);
+
+    int i = 0;
+    int j;
+    int k;
+
+    // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
+    std::string document;
+    while (getline(file, document))
+    {
+        // Read each dimension of the document
+        std::string rows;
+        std::stringstream ss(document);
+        docs[i] = new float *[docLen];
+        j = 0;
+        while (getline(ss, rows, ' ') && j < docLen)
+        {
+            // Read each value of the dimension
+            std::string value;
+            std::stringstream ss2(rows);
+            k = 0;
+            docs[i][j] = new float[docsDim];
+            while (getline(ss2, value, ',') && k < docsDim)
+            {
+                docs[i][j][k] = std::stof(value);
+                k++;
+            }
+            j++;
+        }
+        i++;
+    }
+
+    file.close();
+    // Read target file
+    std::fstream file2;
+    file2.open("../../../data/train/target.txt", ios::in);
+    i = 0;
+    // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
+    while (getline(file2, document))
+    {
+        // Read each dimension of the document
+        std::string rows;
+        std::stringstream ss(document);
+        targets[i] = new int[docLen];
+        j = 0;
+        // printf("document: %s ", document.c_str());
+        while (getline(ss, rows, ' ') && j < docLen)
+        {
+            targets[i][j] = stoi(rows.c_str());
+            j++;
+        }
+        i++;
+    }
+
+    file2.close();
+    // Read meta file
+    std::fstream file3;
+    file3.open("../../../data/train/metadata.txt", ios::in);
+    i = 0;
+    // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
+    while (getline(file3, document))
+    {
+        // Read each dimension of the document
+        std::string rows;
+        std::stringstream ss(document);
+        meta[i] = new float[metaDim];
+        j = 0;
+        while (getline(ss, rows, ',') && j < metaDim)
+        {
+            meta[i][j] = stof(rows);
+            j++;
+        }
+        i++;
+    }
+
+    file3.close();
 }
 
 __device__ float perfomance_by_doc(
@@ -200,21 +303,6 @@ __device__ void copy_individual(
  *  1 - Remove
  *  2 - Replace Create 2 copies of the individual, one without posive gen and other without negative gen selected feature
  */
-/**
- * @brief
- *
- * @param population
- * @param population_offspring
- * @param indexIndividual
- * @param populationDim
- * @param state
- * @return __device__
- *
- * Operation:
- *  0 - Add. Create 2 copies of the individual, one without posive gen and other without negative gen new feature
- *  1 - Remove
- *  2 - Replace Create 2 copies of the individual, one without posive gen and other without negative gen selected feature
- */
 __device__ void mutate(
     float *population,
     float *population_offspring,
@@ -263,6 +351,7 @@ __device__ void mutate(
 
     if (operation == 0)
     {
+        // Add
         copy_individual(
             population,
             population_offspring,
@@ -718,6 +807,60 @@ __global__ void init_random_states(unsigned int seed, unsigned int n, unsigned i
     }
 }
 
+__device__ void migrate_individual(
+    float *population,
+    float *fitness_array,
+    int populationPerIsland,
+    int populationDim,
+    int numIslands,
+    int numberIsland)
+{
+
+    int worstIndex = populationPerIsland * populationDim * (numberIsland + 1) - 1;
+    int bestIndex = numberIsland * populationPerIsland;
+    int neighborhood = (numberIsland + 1) % numIslands;
+
+    // Change best individual to neighbor in same process
+    while (population[neighborhood * worstIndex * populationDim * populationPerIsland + 2] != population[bestIndex * populationDim * populationPerIsland + 2] && worstIndex > bestIndex)
+    {
+        worstIndex--;
+    }
+    fitness_array[worstIndex] = fitness_array[bestIndex];
+    for (int j = 0; j < populationDim; j++)
+    {
+        population[worstIndex * populationDim * populationPerIsland + j] = population[bestIndex * populationDim * populationPerIsland + j];
+    }
+}
+
+__global__ void kernel_migration(
+    float *population,
+    float *fitness_array,
+    int population_size,
+    int populationDim,
+    int numIslands)
+{
+
+    int localIndex = threadIdx.x;
+    int initIteration, endIteration;
+    init_end_iteration(
+        localIndex,
+        numIslands,
+        blockDim.x,
+        initIteration,
+        endIteration);
+
+    for (int index = initIteration; index < endIteration; index++)
+    {
+        migrate_individual(
+            population,
+            fitness_array,
+            population_size,
+            populationDim,
+            numIslands,
+            index);
+    }
+}
+
 void train(
     float **population,
     float ***docs,
@@ -801,15 +944,17 @@ void train(
     cudaMemcpy(d_targets, h_targets, docs_count * docLen * sizeof(int), cudaMemcpyHostToDevice);
     cudaMemcpy(d_meta, h_meta, docs_count * metaDim * sizeof(float), cudaMemcpyHostToDevice);
 
-    // Run kernel
-    // int threadsPerBlock = n_threads;
-    // int blocksPerGrid = (population_size + threadsPerBlock - 1) / threadsPerBlock;
-
-    // kernel_train<<<blocksPerGrid, threadsPerBlock>>>(
     int threadsPerBlock;
-    int numIsland = 1;
+    int numIsland = 8;
+    float avgBestFitness = 0;
+    float avgCurrentFitness = 0;
+    bool stop = false;
+    int maxIteration = 1000;
+    int minIteration = maxIteration;
+    int maxTolerance = 15;
+    int tolerance = 0;
 
-    for (int k = 0; k < 1; k++)
+    for (int k = 0; k < maxIteration; k++)
     {
         threadsPerBlock = (int)ceil((float)n_threads / (float)blocksPerGrid);
         kernel_train<<<blocksPerGrid, threadsPerBlock>>>(
@@ -842,10 +987,50 @@ void train(
             n_threads,
             numIsland);
         cudaDeviceSynchronize();
+        checkCudaErrors(cudaMemcpy(h_fitness_array, d_fitness_array, population_size * sizeof(float), cudaMemcpyDeviceToHost));
+        for (int i = 0; i < population_size; i++)
+        {
+            avgCurrentFitness += h_fitness_array[i];
+        }
+        avgCurrentFitness /= population_size;
+        if (avgCurrentFitness > avgBestFitness)
+        {
+            // Copy best population
+            avgBestFitness = avgCurrentFitness;
+            tolerance = 0;
+            checkCudaErrors(cudaMemcpy(h_population, d_population, population_size * populationDim * sizeof(float), cudaMemcpyDeviceToHost));
+        }
+        else
+        {
+            tolerance++;
+        }
+
+        if (tolerance >= maxTolerance && k >= minIteration)
+        {
+            stop = true;
+        }
+
+        kernel_migration<<<1, min(numIsland, n_threads)>>>(
+            d_population,
+            d_fitness_array,
+            population_size / numIsland,
+            populationDim,
+            min(numIsland, n_threads));
     }
     cudaDeviceSynchronize();
-    checkCudaErrors(cudaMemcpy(h_fitness_array, d_fitness_array, population_size * sizeof(float), cudaMemcpyDeviceToHost));
-    checkCudaErrors(cudaMemcpy(h_population, d_population, population_size * populationDim * sizeof(float), cudaMemcpyDeviceToHost));
+    FILE *fpopulation = fopen("../../../data/rules/cuda/population.txt", "w");
+    for (int i = 0; i < population_size; i++)
+    {
+        if (h_fitness_array[i] > 0)
+        {
+            for (int j = 0; j < populationDim; j++)
+            {
+                fprintf(fpopulation, "%d ", (int)h_population[i * populationDim + j]);
+            }
+            fprintf(fpopulation, "\n");
+        }
+    }
+    fclose(fpopulation);
     // Copy data from h_population to population
     for (int i = 0; i < population_size; i++)
     {
@@ -869,64 +1054,61 @@ void train(
 
 int main(int argc, char *argv[])
 {
-    int population_size = 100;
+    int population_size = 1200;
     int populationDim = 10;
     int docsDim = 3;
     int docLen = 100;
     int metaDim = 3;
-    int docs_count = 2;
+    int docs_count = 200;
     int totalThreads = 100;
-    int unknown_id = 7;
+    int max_iter = 1000;
+    int tol = 0;
+    int maxTolerance = 15;
+    int minIter = 300;
+    int numIslands = 8;
+    int migrationRate = 10;
+    int unknown_id = UNK_ID;
     srand(42);
 
+    for (int i = 0; i < argc; i++)
+    {
+        if (strcmp(argv[i], "-np") == 0)
+        {
+            totalThreads = atoi(argv[i + 1]);
+            i++;
+        }
+    }
+
     float **population = new float *[population_size];
+    printf("Init population\n");
     for (int i = 0; i < population_size; i++)
     {
         population[i] = new float[populationDim];
+        // Size of population
         population[i][0] = 1;
         population[i][1] = 0;
-        population[i][2] = 1;
-        population[i][3] = random_num(1, 10);
-        population[i][4] = 0;
-        population[i][5] = 0;
-        population[i][6] = 0;
-        population[i][7] = 0;
-        population[i][8] = 0;
-        population[i][9] = 0;
+        // Entitiy type
+        population[i][2] = (i % NUM_TAGS) + 1;
+        // First random value
+        population[i][3] = random_num(0, POS_SIZE + DEP_SIZE) + 1;
+        for (int j = 4; j < populationDim; j++)
+        {
+            population[i][j] = 0;
+        }
     }
 
     float ***docs = new float **[docs_count];
-    for (int i = 0; i < docs_count; i++)
-    {
-        docs[i] = new float *[docLen];
-        for (int j = 0; j < docLen; j++)
-        {
-            docs[i][j] = new float[docsDim];
-            docs[i][j][0] = random_num(1, 2);
-            docs[i][j][1] = random_num(3, 5);
-            docs[i][j][2] = random_num(5, 10);
-        }
-    }
-
     int **targets = new int *[docs_count];
-    for (int i = 0; i < docs_count; i++)
-    {
-        targets[i] = new int[docLen];
-        for (int j = 0; j < docLen; j++)
-        {
-            // targets[i][j] = random_num(0, 1);
-            targets[i][j] = 1;
-        }
-    }
-
     float **meta = new float *[docs_count];
-    for (int i = 0; i < docs_count; i++)
-    {
-        meta[i] = new float[metaDim];
-        meta[i][0] = 93;
-        meta[i][1] = 0;
-        meta[i][2] = 0;
-    }
+
+    read_file(
+        docs,
+        targets,
+        meta,
+        docsDim,
+        docLen,
+        metaDim,
+        docs_count);
 
     float *fitness_array = new float[population_size];
     for (int i = 0; i < population_size; i++)
@@ -969,22 +1151,17 @@ int main(int argc, char *argv[])
     {
         printf("%f  ", fitness_array[i]);
     }
-    // print population
-    for (int i = 0; i < population_size; i++)
-    {
-        for (int j = 0; j < populationDim; j++)
-        {
-            printf("%d  ", (int)population[i][j]);
-        }
-        printf("\n");
-    }
+
+    // for (int i = 0; i < population_size; i++)
+    // {
+    //     for (int j = 0; j < populationDim; j++)
+    //     {
+    //         population[i][j] = h_population[i * populationDim + j];
+    //     }
+    // }
+    // Save in file individual with fitness > 0
 
     checkCudaErrors(cudaFree(states));
 
     return 0;
-}
-
-__global__ void test()
-{
-    printf("Hi Cuda World");
 }
