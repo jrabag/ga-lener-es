@@ -15,6 +15,7 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <sys/time.h>
 
 using namespace std;
 
@@ -44,7 +45,7 @@ void read_file(
 {
     // Read input file
     std::fstream file;
-    file.open("../../../data/train/input.txt", std::ios::in);
+    file.open("ga-lener-es/data/train/input.txt", std::ios::in);
 
     int i = 0;
     int j;
@@ -79,7 +80,7 @@ void read_file(
     file.close();
     // Read target file
     std::fstream file2;
-    file2.open("../../../data/train/target.txt", ios::in);
+    file2.open("ga-lener-es/data/train/target.txt", ios::in);
     i = 0;
     // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
     while (getline(file2, document))
@@ -101,7 +102,7 @@ void read_file(
     file2.close();
     // Read meta file
     std::fstream file3;
-    file3.open("../../../data/train/metadata.txt", ios::in);
+    file3.open("ga-lener-es/data/train/metadata.txt", ios::in);
     i = 0;
     // Read line by line to get document. Each line is a document. Each document has 3 dimensions separated by a comma
     while (getline(file3, document))
@@ -134,8 +135,29 @@ __device__ float perfomance_by_doc(
     const int populationDim,
     const int index_doc,
     const int docsDim,
-    const int docLen)
+    const int docLen,
+    int entityLabel)
 {
+
+    // Validate if target is has entity label
+    bool hasEntity = false;
+    int startDoc = index_doc * docLen;
+
+    for (int i = startDoc; i < startDoc + doc_size; i++)
+    {
+        if (targets[i] == entityLabel)
+        {
+            hasEntity = true;
+            break;
+        }
+    }
+
+    // printf("\nhasEntity: %d, entityLabel: %d, startDoc: %d, endDoc: %d", hasEntity, entityLabel, startDoc, endDoc);
+
+    if (!hasEntity)
+    {
+        return -1;
+    }
 
     if (individual_size > doc_size + 2)
     {
@@ -145,16 +167,14 @@ __device__ float perfomance_by_doc(
     // Print the individual, document and tartget if individual_size > 1
     // if (individual_size > 1)
     // {
-    //     printf("Individual: %d %d %d %d %d %d %d %d %d %d\n", (int)population[indexIndividual * populationDim], (int)population[indexIndividual * populationDim + 1], (int)population[indexIndividual * populationDim + 2], (int)population[indexIndividual * populationDim + 3], (int)population[indexIndividual * populationDim + 4], (int)population[indexIndividual * populationDim + 5], (int)population[indexIndividual * populationDim + 6], (int)population[indexIndividual * populationDim + 7], (int)population[indexIndividual * populationDim + 8], (int)population[indexIndividual * populationDim + 9]);
+    //      printf("Individual: %d %d %d %d %d %d %d %d %d %d\n", (int)population[indexIndividual * populationDim], (int)population[indexIndividual * populationDim + 1], (int)population[indexIndividual * populationDim + 2], (int)population[indexIndividual * populationDim + 3], (int)population[indexIndividual * populationDim + 4], (int)population[indexIndividual * populationDim + 5], (int)population[indexIndividual * populationDim + 6], (int)population[indexIndividual * populationDim + 7], (int)population[indexIndividual * populationDim + 8], (int)population[indexIndividual * populationDim + 9]);
     // }
 
     int unionDoc = 0;
     int intercepDoc = 0;
     int retriveDoc = 0;
-
-    // Slice doc
-    int startDoc = index_doc * docLen;
     int endDoc = startDoc + (doc_size - individual_size + 2);
+    // return 1;
     for (int indexTokenDoc = startDoc; indexTokenDoc < endDoc; indexTokenDoc++)
     {
         // Slice tokens
@@ -217,8 +237,10 @@ __device__ float fitness_by_individual(
     const int populationDim,
     const int docsDim,
     const int docLen,
-    const int metaDim)
+    const int metaDim,
+    const int entityLabel)
 {
+    // printf(" entityLabel: %d ", entityLabel);
     const int individual_size = (int)population[indexIndividual * populationDim];
     int entity_id = (int)population[indexIndividual * populationDim + 2];
     // float perfomance_doc[docs_count];
@@ -238,7 +260,8 @@ __device__ float fitness_by_individual(
             populationDim,
             index_doc,
             docsDim,
-            docLen);
+            docLen,
+            entityLabel);
         if (tempPerfomance >= 0)
         {
             perfomance_docs += tempPerfomance;
@@ -398,7 +421,20 @@ __device__ void mutate(
     // Create new gen
     if (operation == 0 || operation == 2)
     {
-        float gen = (int)(curand_uniform(state) * 10) + 1;
+        float gen;
+        int featureType = (int)curand_uniform(state) * 3;
+        if (featureType == 0)
+        {
+            gen = (int)(curand_uniform(state) * (POS_SIZE - 2)) + 2;
+        }
+        else if (featureType == 1)
+        {
+            gen = (int)(curand_uniform(state) * (DEP_SIZE - 2)) + POS_SIZE + 2;
+        }
+        else
+        {
+            gen = (int)(curand_uniform(state) * (WORD_SIZE)) + POS_SIZE + DEP_SIZE;
+        }
         population_offspring[indexIndividualOffspring1 * populationDim + index_feature] = gen;
         population_offspring[indexIndividualOffspring2 * populationDim + index_feature] = -gen;
     }
@@ -464,7 +500,7 @@ __device__ float individual_shared_fitness(
             vectorDim,
             indexIndividual,
             index2 * populationDim + index_start_ind);
-        if (simil > 0.5)
+        if (simil > 0.7)
         {
             num_members += simil;
         }
@@ -481,7 +517,7 @@ __device__ float individual_shared_fitness(
             vectorDim,
             indexIndividual,
             index2 * populationDim + index_start_ind);
-        if (simil > 0.5)
+        if (simil > 0.7)
         {
             num_members += simil;
         }
@@ -539,7 +575,8 @@ __global__ void kernel_train(
     float *fitness_array,
     float *fitness_spring,
     curandState_t *states,
-    const int numIslands)
+    const int numIslands,
+    const int numTag)
 {
 
     int globalIndex = blockIdx.x * blockDim.x + threadIdx.x;
@@ -554,6 +591,8 @@ __global__ void kernel_train(
 
     for (int index = initIteration; index < endIteration; index++)
     {
+        int populationPerIsland = population_size / numIslands;
+        // printf("entityLabel1: %d, entityLabel2: %d ", entityLabel/3, entityLabel/3, entityLabel/2);
         if (index < population_size)
         {
             mutate(
@@ -568,6 +607,7 @@ __global__ void kernel_train(
         // Fitness parent population
         if (index < population_size)
         {
+            int entityLabel = (index / populationPerIsland / 3) % numTag;
             fitness_array[index] = fitness_by_individual(
                 population,
                 docs,
@@ -579,11 +619,13 @@ __global__ void kernel_train(
                 populationDim,
                 docsDim,
                 docLen,
-                metaDim);
+                metaDim,
+                entityLabel + 1);
         }
         // Fitness offspring population
         if (index >= population_size && index < population_size * 3)
         {
+            int entityLabel = (index / populationPerIsland / 2) % numTag;
             fitness_spring[index - population_size] = fitness_by_individual(
                 population_offspring,
                 docs,
@@ -595,7 +637,8 @@ __global__ void kernel_train(
                 populationDim,
                 docsDim,
                 docLen,
-                metaDim);
+                metaDim,
+                entityLabel + 1);
         }
         __syncthreads();
         // Selection
@@ -689,7 +732,7 @@ __global__ void kernel_population_sort(
             }
 
             // Vertical swap
-            if (fitness_array[index1] < fitness_spring[index1])
+            if (fitness_array[index1] < fitness_spring[index1 * 2])
             {
                 swap_fitness(
                     population,
@@ -697,11 +740,11 @@ __global__ void kernel_population_sort(
                     index1,
                     population_offspring,
                     fitness_spring,
-                    index1,
+                    index1 * 2,
                     populationDim);
             }
 
-            if (fitness_array[index1] < fitness_spring[index1 + population_size])
+            if (fitness_array[index1] < fitness_spring[index1 * 2 + 1])
             {
                 swap_fitness(
                     population,
@@ -709,7 +752,7 @@ __global__ void kernel_population_sort(
                     index1,
                     population_offspring,
                     fitness_spring,
-                    index1 + population_size,
+                    index1 * 2 + 1,
                     populationDim);
             }
         }
@@ -752,7 +795,7 @@ __global__ void kernel_population_sort(
             }
 
             // Vertical swap
-            if (fitness_array[index1] < fitness_spring[index1])
+            if (fitness_array[index1] < fitness_spring[index1 * 2])
             {
                 swap_fitness(
                     population,
@@ -760,11 +803,11 @@ __global__ void kernel_population_sort(
                     index1,
                     population_offspring,
                     fitness_spring,
-                    index1,
+                    index1 * 2,
                     populationDim);
             }
 
-            if (fitness_array[index1] < fitness_spring[index1 + population_size])
+            if (fitness_array[index1] < fitness_spring[index1 * 2 + 1])
             {
                 swap_fitness(
                     population,
@@ -772,7 +815,7 @@ __global__ void kernel_population_sort(
                     index1,
                     population_offspring,
                     fitness_spring,
-                    index1 + population_size,
+                    index1 * 2 + 1,
                     populationDim);
             }
         }
@@ -816,19 +859,23 @@ __device__ void migrate_individual(
     int numberIsland)
 {
 
-    int worstIndex = populationPerIsland * populationDim * (numberIsland + 1) - 1;
-    int bestIndex = numberIsland * populationPerIsland;
     int neighborhood = (numberIsland + 1) % numIslands;
+    int worstIndex = populationPerIsland * (neighborhood + 1) - 1;
+    int bestIndex = numberIsland * populationPerIsland;
+    int displacement = 0;
 
     // Change best individual to neighbor in same process
-    while (population[neighborhood * worstIndex * populationDim * populationPerIsland + 2] != population[bestIndex * populationDim * populationPerIsland + 2] && worstIndex > bestIndex)
+    float typeBestIndividual = population[bestIndex * populationDim + 2];
+    while (population[worstIndex * populationDim + 2] != typeBestIndividual && displacement < populationPerIsland)
     {
         worstIndex--;
+        displacement++;
     }
+    // printf("\nworstIndex: %d, bestIndex: %d", worstIndex, bestIndex);
     fitness_array[worstIndex] = fitness_array[bestIndex];
     for (int j = 0; j < populationDim; j++)
     {
-        population[worstIndex * populationDim * populationPerIsland + j] = population[bestIndex * populationDim * populationPerIsland + j];
+        population[worstIndex * populationDim + j] = population[bestIndex * populationDim + j];
     }
 }
 
@@ -876,6 +923,7 @@ void train(
     int n_threads,
     int blocksPerGrid,
     float *h_fitness_array,
+    const int maxIter,
     curandState_t *states)
 {
     float *d_population;
@@ -946,16 +994,10 @@ void train(
 
     int threadsPerBlock;
     int numIsland = 8;
-    float avgBestFitness = 0;
-    float avgCurrentFitness = 0;
-    bool stop = false;
-    int maxIteration = 1000;
-    int minIteration = maxIteration;
-    int maxTolerance = 15;
-    int tolerance = 0;
 
-    for (int k = 0; k < maxIteration; k++)
+    for (int k = 0; k < maxIter; k++)
     {
+        printf("Iteration %d start\n", k);
         threadsPerBlock = (int)ceil((float)n_threads / (float)blocksPerGrid);
         kernel_train<<<blocksPerGrid, threadsPerBlock>>>(
             d_population,
@@ -974,9 +1016,9 @@ void train(
             d_fitness_array,
             d_fitness_spring,
             states,
-            numIsland);
+            numIsland,
+            NUM_TAGS);
         cudaDeviceSynchronize();
-        threadsPerBlock = (int)ceil((float)n_threads / (float)numIsland);
         kernel_population_sort<<<numIsland, threadsPerBlock>>>(
             d_population,
             d_population_offspring,
@@ -987,38 +1029,22 @@ void train(
             n_threads,
             numIsland);
         cudaDeviceSynchronize();
-        checkCudaErrors(cudaMemcpy(h_fitness_array, d_fitness_array, population_size * sizeof(float), cudaMemcpyDeviceToHost));
-        for (int i = 0; i < population_size; i++)
+        if (k % 10 == 0)
         {
-            avgCurrentFitness += h_fitness_array[i];
+            kernel_migration<<<1, numIsland>>>(
+                d_population,
+                d_fitness_array,
+                population_size / numIsland,
+                populationDim,
+                numIsland);
+            cudaDeviceSynchronize();
         }
-        avgCurrentFitness /= population_size;
-        if (avgCurrentFitness > avgBestFitness)
-        {
-            // Copy best population
-            avgBestFitness = avgCurrentFitness;
-            tolerance = 0;
-            checkCudaErrors(cudaMemcpy(h_population, d_population, population_size * populationDim * sizeof(float), cudaMemcpyDeviceToHost));
-        }
-        else
-        {
-            tolerance++;
-        }
-
-        if (tolerance >= maxTolerance && k >= minIteration)
-        {
-            stop = true;
-        }
-
-        kernel_migration<<<1, min(numIsland, n_threads)>>>(
-            d_population,
-            d_fitness_array,
-            population_size / numIsland,
-            populationDim,
-            min(numIsland, n_threads));
     }
     cudaDeviceSynchronize();
-    FILE *fpopulation = fopen("../../../data/rules/cuda/population.txt", "w");
+    checkCudaErrors(cudaMemcpy(h_fitness_array, d_fitness_array, population_size * sizeof(float), cudaMemcpyDeviceToHost));
+    checkCudaErrors(cudaMemcpy(h_population, d_population, population_size * populationDim * sizeof(float), cudaMemcpyDeviceToHost));
+    string populationFilename = "population_" + to_string(n_threads) + ".txt";
+    FILE *fpopulation = fopen(populationFilename.c_str(), "w");
     for (int i = 0; i < population_size; i++)
     {
         if (h_fitness_array[i] > 0)
@@ -1031,14 +1057,6 @@ void train(
         }
     }
     fclose(fpopulation);
-    // Copy data from h_population to population
-    for (int i = 0; i < population_size; i++)
-    {
-        for (int j = 0; j < populationDim; j++)
-        {
-            population[i][j] = h_population[i * populationDim + j];
-        }
-    }
 
     checkCudaErrors(cudaFree(d_population));
     checkCudaErrors(cudaFree(d_population_offspring));
@@ -1061,12 +1079,11 @@ int main(int argc, char *argv[])
     int metaDim = 3;
     int docs_count = 200;
     int totalThreads = 100;
-    int max_iter = 1000;
+    int maxIter = 1000;
     int tol = 0;
     int maxTolerance = 15;
-    int minIter = 300;
     int numIslands = 8;
-    int migrationRate = 10;
+    // int migrationRate = 10;
     int unknown_id = UNK_ID;
     srand(42);
 
@@ -1077,8 +1094,18 @@ int main(int argc, char *argv[])
             totalThreads = atoi(argv[i + 1]);
             i++;
         }
+        if (strcmp(argv[i], "-it") == 0)
+        {
+            maxIter = atoi(argv[i + 1]);
+            i++;
+        }
     }
 
+    // Write time to file. If file exists, append to it.
+    FILE *f = fopen("time.txt", "a");
+    clock_t start, end;
+    double cpu_time_used;
+    start = clock();
     float **population = new float *[population_size];
     printf("Init population\n");
     for (int i = 0; i < population_size; i++)
@@ -1109,6 +1136,7 @@ int main(int argc, char *argv[])
         docLen,
         metaDim,
         docs_count);
+    printf("File read\n");
 
     float *fitness_array = new float[population_size];
     for (int i = 0; i < population_size; i++)
@@ -1143,7 +1171,13 @@ int main(int argc, char *argv[])
         totalThreads,
         blocksPerGrid,
         fitness_array,
+        maxIter,
         states);
+
+    end = clock();
+    cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+    fprintf(f, "%d,%f\n", totalThreads, cpu_time_used);
+    fclose(f);
 
     // print fitness array
     printf("\n");
@@ -1152,16 +1186,16 @@ int main(int argc, char *argv[])
         printf("%f  ", fitness_array[i]);
     }
 
-    // for (int i = 0; i < population_size; i++)
-    // {
-    //     for (int j = 0; j < populationDim; j++)
-    //     {
-    //         population[i][j] = h_population[i * populationDim + j];
-    //     }
-    // }
-    // Save in file individual with fitness > 0
+    // // for (int i = 0; i < population_size; i++)
+    // // {
+    // //     for (int j = 0; j < populationDim; j++)
+    // //     {
+    // //         population[i][j] = h_population[i * populationDim + j];
+    // //     }
+    // // }
+    // // Save in file individual with fitness > 0
 
-    checkCudaErrors(cudaFree(states));
+    // checkCudaErrors(cudaFree(states));
 
     return 0;
 }

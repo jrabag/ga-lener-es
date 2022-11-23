@@ -1067,10 +1067,16 @@ int main(int argc, char *argv[])
                 {
                     // Change best individual to neighbor in same process
                     float tempFitness = s_fitness[bestIndex];
-                    while (s_population[worstIndex * populationDim + 2] != individualMigrationRecv[2] && worstIndex > bestIndex)
+                    worstIndex += populationPerIsland;
+                    int worstIndexIt = 0;
+                    while (s_population[worstIndex * populationDim + 2] != individualMigrationRecv[2] && worstIndexIt < populationPerIsland)
                     {
                         worstIndex--;
+                        worstIndexIt++;
                     }
+                    printf(
+                        "it:%d index: %d iam %d received fitness %.6f from %d\n",
+                        iteration, worstIndex, iam, individualFitness, neighborhood);
                     s_fitness[worstIndex] = tempFitness;
                     for (int j = 0; j < populationDim; j++)
                     {
@@ -1129,8 +1135,10 @@ int main(int argc, char *argv[])
                     // if (s_fitness[worstIndex] < individualFitness)
                     // if (s_fitness[worstIndex] == 0)
                     //{
+                    printf(
+                        "it:%d index: %d iam %d received fitness %.6f from %d\n",
+                        iteration, worstIndex, iam, individualFitness, source);
                     s_fitness[worstIndex] = individualFitness;
-                    printf("iam %d received fitness %.6f from %d\n", iam, individualFitness, source);
                     for (int j = 0; j < populationDim; j++)
                     {
                         s_population[worstIndex * populationDim + j] = individualMigrationRecv[j];
