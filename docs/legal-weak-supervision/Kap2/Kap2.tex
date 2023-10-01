@@ -1,0 +1,210 @@
+\chapter{Background}
+
+% Los cap\'{\i}tulos son las principales divisiones del documento. En estos, se desarrolla el tema del documento. Cada cap\'{\i}tulo debe corresponder a uno de los temas o aspectos tratados en el documento y por tanto debe llevar un t\'{\i}tulo que indique el contenido del cap\'{\i}tulo.
+
+% Los t\'{\i}tulos de los cap\'{\i}tulos deben ser concertados entre el alumno y el director de la tesis  o trabajo de investigaci\'{o}n, teniendo en cuenta los lineamientos que cada unidad acad\'{e}mica brinda. As\'{\i} por ejemplo, en algunas facultades se especifica que cada cap\'{\i}tulo debe corresponder a un art\'{\i}culo cient\'{\i}fico, de tal manera que se pueda publicar posteriormente en una revista.
+
+% [1]	K. Dhrisya, G. Remya, and A. Mohan, “Fine-grained entity type classification using GRU with self-attention,” Int. J. Inf. Technol., pp. 1–10, Jul. 2020, doi: 10.1007/s41870-020-00499-5.
+% [2]	P. V de Castro, N. da Silva, and A. da Silva Soares, “Portuguese Named Entity Recognition Using LSTM-CRF,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11122 LNAI, pp. 83–92, 2018, doi: 10.1007/978-3-319-99722-3_9.
+% [3]	P. H. Luz de Araujo, T. E. de Campos, R. R. R. de Oliveira, M. Stauffer, S. Couto, and P. Bermejo, “LeNER-Br: A Dataset for Named Entity Recognition in Brazilian Legal Text,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11122 LNAI, pp. 313–323, 2018, doi: 10.1007/978-3-319-99722-3_32.
+% [4]	I. Badji, O. Corcho, and V. Rodríguez-Doncel, “Legal Entity Extraction with NER Systems,” Universidad Politécnica de Madrid, 2018.
+% [5]	L. F. Rau, “Extracting company names from text,” Proc. Conf. Artif. Intell. Appl., pp. 29–32, 1990, doi: 10.1109/caia.1991.120841.
+% [6]	J. Wu, R. Zhang, T. Deng, and J. Huai, “Named Entity Recognition for Open Domain Data Based on Distant Supervision,” Commun. Comput. Inf. Sci., vol. 1134 CCIS, pp. 185–197, 2019, doi: 10.1007/978-981-15-1956-7_17.
+% [7]	I. Bordino, A. Ferretti, F. Gullo, and S. Pascolutti, “GarNLP: A Natural Language Processing Pipeline for Garnishment Documents,” Inf. Syst. Front., 2020, doi: 10.1007/s10796-020-09997-0.
+% [8]	H. Zhu, C. He, Y. Fang, and W. Xiao, “Fine Grained Named Entity Recognition via Seq2seq Framework,” IEEE Access, vol. 8, pp. 53953–53961, 2020, doi: 10.1109/ACCESS.2020.2980431.
+% [9]	S. Zhong, Y. Du, and Z. W. Gao, “Fine-Grained Named Entity Recognition in Question Answering with DBpedia,” in Journal of Physics: Conference Series, 2018, vol. 1087, no. 3, doi: 10.1088/1742-6596/1087/3/032003.
+% [10]	H. T. Nguyen and T. Q. Nguyen, “A short review on deep learning for entity recognition,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11251 LNCS, pp. 261–272, 2018, doi: 10.1007/978-3-030-03192-3_20.
+% [11]	S. Sharafat, Z. Nasar, and S. W. Jaffry, “Data mining for smart legal systems,” Comput. Electr. Eng., vol. 78, pp. 328–342, 2019, doi: https://doi.org/10.1016/j.compeleceng.2019.07.017.
+% [12]	M. Al-Smadi, S. Al-Zboon, Y. Jararweh, and P. Juola, “Transfer Learning for Arabic Named Entity Recognition with Deep Neural Networks,” IEEE Access, vol. 8, pp. 37736–37745, 2020, doi: 10.1109/ACCESS.2020.2973319.
+% [13]	J. Copara, J. Ochoa, C. Thorne, and G. Glavas, “Exploring Unsupervised Features in Conditional Random Fields for Spanish Named Entity Recognition,” in Proceedings - 2016 5th Brazilian Conference on Intelligent Systems, BRACIS 2016, 2017, pp. 283–288, doi: 10.1109/BRACIS.2016.059.
+% [14]	H. Dito Murya Alfarohmi and M. A. Bijaksana, “Building the Indonesian NE Dataset Using Wikipedia and DBpedia with Entities Expansion Method on DBpedia,” in Proceedings of the 2018 International Conference on Asian Language Processing, IALP 2018, 2019, pp. 334–339, doi: 10.1109/IALP.2018.8629117.
+% [15]	R. Weegar, A. Pérez, A. Casillas, and M. Oronoz, “Deep Medical Entity Recognition for Swedish and Spanish,” in Proceedings - 2018 IEEE International Conference on Bioinformatics and Biomedicine, BIBM 2018, 2019, pp. 1595–1601, doi: 10.1109/BIBM.2018.8621282.
+% [16]	X. Ling and D. S. Weld, “Fine-Grained Entity Recognition,” in Proceedings of the Twenty-Sixth AAAI Conference on Artificial Intelligence, 2012, pp. 94–100, doi: 10.5555/2900728.2900742.
+% [17]	P. Lison, A. Hubin, J. Barnes, and S. Touileb, “Named Entity Recognition without Labelled Data: A Weak Supervision Approach,” arXiv preprint arXiv:2004.14723. 2020, Accessed: May 08, 2020. [Online]. Available: https://github.com/NorskRegnesentral/.
+% [18]	D. I. Adelani, M. A. Hedderich, D. Zhu, E. van den Berg, and D. Klakow, “Distant Supervision and Noisy Label Learning for Low Resource Named Entity Recognition: A Study on Hausa and Yorùbá,” Mar. 2020, Accessed: Mar. 23, 2020. [Online]. Available: http://arxiv.org/abs/2003.08370.
+% [19]	M. Z. Yaosheng Yang, Wenliang Chen, Zhenghua Li, Zhengqiu He, “Distantly Supervised NER with Partial Annotation Learning and Reinforcement Learning,” 2018. Accessed: Mar. 23, 2020. [Online]. Available: https://github.com/rainarch/DSNER.
+% [20]	D. Samy, J. Arenas García, and D. Pérez Fernández, “Legal-ES: A Set of Large Scale Resources for Spanish Legal Text Processing,” in Proceedings of the 1st Workshop on Language Technologies for Government and Public Administration (LT4Gov), May 2020, pp. 31–36, Accessed: May 31, 2020. [Online]. Available: https://www.aclweb.org/anthology/2020.lt4gov-1.6.
+% [21]	N. T. Son, N. T. Phuong Duyen, H. B. Quoc, and L. M. Nguyen, “Recognizing logical parts in Vietnamese legal texts using conditional random fields,” in Proceedings - 2015 IEEE RIVF International Conference on Computing and Communication Technologies: Research, Innovation, and Vision for Future, IEEE RIVF 2015, 2015, pp. 1–6, doi: 10.1109/RIVF.2015.7049865.
+% [22]	S. Sharafat, Z. Nasar, and S. W. Jaffry, “Legal Data Mining from Civil Judgments,” Commun. Comput. Inf. Sci., vol. 932, pp. 426–436, 2019, doi: 10.1007/978-981-13-6052-7_37.
+% [23]	E. Leitner, G. Rehm, and J. Moreno-Schneider, “Fine-Grained Named Entity Recognition in Legal Documents,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11702 LNCS, pp. 272–287, 2019, doi: 10.1007/978-3-030-33220-4_20.
+% [24]	H. Zhu, W. Hu, and Y. Zeng, “FlexNER: A Flexible LSTM-CNN Stack Framework for Named Entity Recognition,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11839 LNAI, pp. 168–178, 2019, doi: 10.1007/978-3-030-32236-6_14.
+% [25]	G. Park and H. Kim, “Low-cost implementation of a named entity recognition system for voice-activated human-appliance interfaces in a smart home,” Sustain., vol. 10, no. 2, 2018, doi: 10.3390/su10020488.
+% [26]	S. Santiso, A. Pérez, A. Casillas, and M. Oronoz, “Neural negated entity recognition in Spanish electronic health records,” J. Biomed. Inform., vol. 105, p. 103419, 2020, doi: https://doi.org/10.1016/j.jbi.2020.103419.
+% [27]	V. R. Martínez, L. E. Pérez, F. Iacobelli, S. S. Bojórquez, and V. M. González, “Semi-supervised approach to named entity recognition in Spanish applied to a real-world conversational system,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 9116, pp. 224–235, 2015, doi: 10.1007/978-3-319-19264-2_22.
+% [28]	D. S. Menezes, R. L. Milidiú, and P. Savarese, “Building a massive corpus for named entity recognition using free open data sources,” in Proceedings - 2019 Brazilian Conference on Intelligent Systems, BRACIS 2019, 2019, pp. 6–11, doi: 10.1109/BRACIS.2019.00011.
+% [29]	I. Alfina, R. Manurung, and M. I. Fanany, “DBpedia entities expansion in automatically building dataset for Indonesian NER,” in 2016 International Conference on Advanced Computer Science and Information Systems, ICACSIS 2016, 2017, pp. 335–340, doi: 10.1109/ICACSIS.2016.7872784.
+% [30]	S. Wehnert, D. Broneske, S. Langer, and G. Saake, “Concept Hierarchy Extraction from Legal Literature,” 2018, Accessed: Apr. 10, 2020. [Online]. Available: http://ceur-ws.org/Vol-2482/paper33.pdf.
+% [31]	R. Schwarzenberg, L. Hennig, and H. Hemsen, “In-memory distributed training of linear-chain conditional random fields with an application to fine-grained named entity recognition,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 10713 LNAI, pp. 155–167, 2018, doi: 10.1007/978-3-319-73706-5_13.
+% [32]	I. Glaser, B. Waltl, and F. Matthes, “Named entity recognition, extraction, and linking in German legal contracts,” Jusletter IT, no. February, 2018, [Online]. Available: https://www.scopus.com/inward/record.uri?eid=2-s2.0-85069857404&partnerID=40&md5=28187fa2858179712ff8e50454f87102.
+% [33]	E. Leitner, G. Rehm, and J. Moreno-Schneider, “A Dataset of German Legal Documents for Named Entity Recognition,” 2020. Accessed: Apr. 10, 2020. [Online]. Available: http://www.lynx-project.eu.
+% [34]	A. Ratner, S. H. Bach, H. Ehrenberg, J. Fries, S. Wu, and C. Ré, “Snorkel: rapid training data creation with weak supervision,” in VLDB Journal, May 2020, vol. 29, no. 2–3, pp. 709–730, doi: 10.1007/s00778-019-00552-1.
+% [35]	G. Lample, M. Ballesteros, S. Subramanian, K. Kawakami, and C. Dyer, “Neural architectures for named entity recognition,” in 2016 Conference of the North American Chapter of the Association for Computational Linguistics: Human Language Technologies, NAACL HLT 2016 - Proceedings of the Conference, 2016, pp. 260–270, doi: 10.18653/v1/n16-1030.
+% [36]	C. Chen, Y. Zhang, and Y. Gao, “Learning How to Self-Learn: Enhancing Self-Training Using Neural Reinforcement Learning,” in 2018 International Conference on Asian Language Processing (IALP), 2018, pp. 25–30, doi: 10.1109/IALP.2018.8629107.
+% [37]	O. M. Singh, A. Padia, and A. Joshi, “Named entity recognition for Nepali language,” in Proceedings - 2019 IEEE 5th International Conference on Collaboration and Internet Computing, CIC 2019, 2019, pp. 184–190, doi: 10.1109/CIC48465.2019.00031.
+% [38]	V. Cotik, H. Rodríguez, and J. Vivaldi, “Spanish named entity recognition in the biomedical domain,” Commun. Comput. Inf. Sci., vol. 898, pp. 233–248, 2019, doi: 10.1007/978-3-030-11680-4_23.
+% [39]	Y. Lao, J. Xu, S. Gao, J. Guo, and J.-R. Wen, “Name entity recognition with policy-value networks,” in SIGIR 2019 - Proceedings of the 42nd International ACM SIGIR Conference on Research and Development in Information Retrieval, 2019, pp. 1245–1248, doi: 10.1145/3331184.3331349.
+% [40]	J. Mathew, S. Fakhraei, and J. L. Ambite, “Biomedical Named Entity Recognition via Reference-Set Augmented Bootstrapping,” CoRR, vol. abs/1906.0, Jun. 2019, Accessed: Apr. 10, 2020. [Online]. Available: http://arxiv.org/abs/1906.00282.
+% [41]	M. Ju, N. T. H. Nguyen, M. Miwa, and S. Ananiadou, “An ensemble of neural models for nested adverse drug events and medication extraction with subwords,” J. Am. Med. Inform. Assoc., vol. 27, no. 1, pp. 22–30, 2020, doi: 10.1093/jamia/ocz075.
+% [42]	M. Liu, W. Buntine, and G. Haffari, “Learning how to actively learn: A deep imitation learning approach,” in ACL 2018 - 56th Annual Meeting of the Association for Computational Linguistics, Proceedings of the Conference (Long Papers), 2018, vol. 1, pp. 1874–1883, [Online]. Available: https://www.scopus.com/inward/record.uri?eid=2-s2.0-85062635146&partnerID=40&md5=ca147d42548104cac4cf2cab7000692e.
+% [43]	T. Lu, Y. Gui, and Z. Gao, “Document-Level Named Entity Recognition with Q-Network,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11672 LNAI, pp. 164–178, 2019, doi: 10.1007/978-3-030-29894-4_13.
+% [44]	A. Magueresse, V. Carles, and E. Heetderks, “Low-resource Languages: A Review of Past Work and Future Challenges,” 2020. Accessed: Jun. 21, 2020. [Online]. Available: https://www.mtsummit2019.com/.
+% [45]	Y. Wang, A. Patel, and H. Jin, “A New Concept of Deep Reinforcement Learning based Augmented General Sequence Tagging System,” Dec. 2018, Accessed: Mar. 23, 2020. [Online]. Available: http://arxiv.org/abs/1812.10234.
+% [46]	J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding,” Oct. 2018, Accessed: Apr. 10, 2020. [Online]. Available: http://arxiv.org/abs/1810.04805.
+% [47]	Z. Wang, S. Mayhew, and D. Roth, “Extending Multilingual BERT to Low-Resource Languages.” Accessed: May 05, 2020. [Online]. Available: https://www.ethnologue.
+% [48]	T. Wolf et al., “HuggingFace’s Transformers: State-of-the-art Natural Language Processing,” 2019. Accessed: Apr. 15, 2020. [Online]. Available: https://github.com/huggingface/.
+% [49]	J. Kim, S. Kang, Y. Park, and J. Seo, “Transfer Learning from Automatically Annotated Data for Recognizing Named Entities in Recent Generated Texts,” 2019 IEEE Int. Conf. Big Data Smart Comput. BigComp 2019 - Proc., pp. 1–5, 2019, doi: 10.1109/BIGCOMP.2019.8679473.
+% [50]	C. Cardellino, M. Teruel, L. Alonso Alemany, and S. Villata, “A Low-cost, High-coverage Legal Named Entity Recognizer, Classifier and Linker,” in Proceedings of the 16th Edition of the International Conference on Articial Intelligence and Law, 2017, vol. 10, pp. 9–18, doi: 10.1145/3086512.3086514.
+% [51]	S. Kumar and R. Politi, “Understanding User Query Intent and Target Terms in Legal Domain,” Lect. Notes Comput. Sci. (including Subser. Lect. Notes Artif. Intell. Lect. Notes Bioinformatics), vol. 11608 LNCS, pp. 41–53, 2019, doi: 10.1007/978-3-030-23281-8_4.
+% [52]	H. Zhong, C. Xiao, C. Tu, T. Zhang, Z. Liu, and M. Sun, “How Does NLP Benefit Legal System: A Summary of Legal Artificial Intelligence.” 2020, Accessed: May 04, 2020. [Online]. Available: https://github.com/thunlp/LegalPapers.
+% [53]	A. Ittoo, L. M. Nguyen, and A. [van den Bosch], “Text analytics in industry: Challenges, desiderata and trends,” Comput. Ind., vol. 78, pp. 96–107, 2016, doi: https://doi.org/10.1016/j.compind.2015.12.001.
+% [54]	J. W. (University of N.-L. CRESWELL, RESEARCH DESIGN Qualitative. Quantitative, and Mixed Methods Approaches, Third. Los Angeles: SAGE Publications Ltd, 2009.
+% [55]	J. L. Abreu, “Hipótesis, Método & Diseño de Investigación,” Daena Int. J. Good Conscienc., vol. 7, no. 2, pp. 187–197, 2012.
+% [56]	M. Teruel, C. Cardellino, F. Cardellino, L. A. Alemany, and S. Villata, “Legal text processing within the MIREL project,” in Proceedings ofthe LREC 2018 “Workshop on Language Resources and Technologies for the Legal Knowledge Graph,” 2018, pp. 42–49, Accessed: Oct. 23, 2020. [Online]. Available: https://github.com/PLN-FaMAF/ArgumentMiningECHR.
+% [57]	M. T. Ribeiro, S. Singh, and C. Guestrin, “‘Why should i trust you?’ Explaining the predictions of any classifier,” in Proceedings of the ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, Aug. 2016, vol. 13-17-August-2016, pp. 1135–1144, doi: 10.1145/2939672.2939778.
+% [58]	B. Kitchenham, O. Pearl Brereton, D. Budgen, M. Turner, J. Bailey, and S. Linkman, “Systematic literature reviews in software engineering - A systematic literature review,” Inf. Softw. Technol., vol. 51, no. 1, pp. 7–15, 2009, doi: 10.1016/j.infsof.2008.09.009.
+
+
+% Toda divisi\'{o}n o cap\'{\i}tulo, a su vez, puede subdividirse en otros niveles y s\'{o}lo se enumera hasta el tercer nivel. Los t\'{\i}tulos de segundo nivel se escriben con min\'{u}scula al margen izquierdo y sin punto final, est\'{a}n separados del texto o contenido por un interlineado posterior de 10 puntos y anterior de 20 puntos (tal y como se presenta en la plantilla).
+
+% De la cuarta subdivisi\'{o}n en adelante, cada nueva divisi\'{o}n o \'{\i}tem puede ser se\~{n}alada con vi\~{n}etas, conservando el mismo estilo de \'{e}sta, a lo largo de todo el documento.
+
+% Las subdivisiones, las vi\~{n}etas y sus textos acompa\~{n}antes deben presentarse sin sangr\'{\i}a y justificados.
+
+\section{Named entity recognition}
+
+In 1991, Lisa F. Rau presented the first research work related to NER at the Seventh IEEE Conference on Artificial Intelligence Applications. In this work, an algorithm designed to extract company names from financial news texts is described, for which heuristics and manually crafted rules were used [5]. It wasn't until 1995 that the term 'named entity' (NE) was introduced for the first time in MUC-6 (the sixth conference in a series of Message Understanding Conferences) as unique identifiers for entities [1], [4].
+
+Named Entity Recognition (NER) is a foundational task in Natural Language Processing (NLP).
+It serves as a foundational component for more complex NLP tasks \cite{ma-etal-2022-label} by providing insights into sentence structure and word relationships. NER involves identifying words within unstructured text and classifying them into categories that typically refers to proper nouns, including names of individuals (\textbf{PER}), locations (\textbf{LOC}), and organizations (\textbf{ORG}). However, it is often extended to encompass entities that may not inherently be considered as such (\textbf{MISC})\cite{martin-2020-speech}, such as dates, quantities, and percentages, among others [4].
+
+NER is considered a sequence labeling task\cite{martin-2020-speech}, in which each word $x_i$ in an input word sequence is assigned a label $y_i$, resulting in an output sequence $Y$ of the same length as the input sequence $X$. The objective of sequence labeling is to determine the most probable label sequence $Y$ based on the input sequence $X$.
+
+To develop NER systems, primarily three approaches have been used:
+\begin{itemize}
+    \item \textbf{Rule-based systems:} These systems often demonstrate high precision and are configured deterministically by experts [4]. They require substantial grammatical knowledge, language-specific expertise, and mainly rely on dictionaries, regular expressions, and context-free grammars [12].
+    \item \textbf{Statistical methods:} Utilizing probability distributions such as Hidden Markov Models (HMMs), they assign a set of labels and their probabilities to each word and employ machine learning to determine model parameters [10].
+    \item \textbf{Deep learning-based:} These are neural networks with multiple interconnected layers that require a substantial amount of labeled data to acquire language knowledge [10], [12]-[14].
+\end{itemize}
+
+NER leads to valuable applications such as:
+\begin{itemize}
+    \item\textbf{Information Retrieval (IR):} By recognizing named entities in both the query and the document to be retrieved, the system can extract relevant documents and information related to the identified entities in the query [6], [7].
+    \item\textbf{Question Answering (QA):} NER can be used in the question processing phase to recognize named entities within the question, which later aids in identifying relevant documents and constructing answers based on passages from the document [8], [9].
+    \item\textbf{Machine Translation (MT):} The type of NE can assist in deciding which parts of the entity should be translated with their meanings and which parts should be transliterated [10].
+    \item\textbf{Text Summarization:} Automation of text summarization by extracting the most important information related to a law, including the judge's name, the defendant, the case's motive, the decision made, and more [11].
+    \item\textbf{Sentiment Analysis (SA):} Also known as opinion analysis, it can help determine the attitude or opinion of the subject regarding a specific legal matter [4], [10].
+\end{itemize}
+
+
+\subsection{Fine-grained Named Entity Recognition}
+
+In a coarse-grained entity recognition system, the identified categories, such as person, location, or organization, are not expressive enough to handle certain NLP tasks like relation extraction, where there may be hundreds or even thousands of different relationships [8]. In 2012 [16], with the aim of improving the results achievable in relation extraction, the idea of expanding all commonly identified coarse-grained entities into entities with a higher level of semantic detail was proposed. These more detailed entities are known as fine-grained named entities (FGNER) [10].
+
+For instance, in the legal domain, instead of recognizing a person entity type, the goal is to identify more specific categories of a person, such as lawyer, judge, witness, whistleblower, or defendant.
+
+In [8] and [10], systems developed for fine-grained named entity recognition (FGNER) are mentioned, and these systems are presented in Table \ref{tab:fgner} These systems encounter effectiveness issues when dealing with more than 100 types of named entities. Consequently, recent proposals have introduced sequential deep learning neural network models to enhance performance [8], [10].
+\begin{center}
+    \begin{table}[h]
+        \centering%
+        \caption{Fine-grained named entity recognition systems}
+        \label{tab:fgner}
+        \begin{tabular}{|l|l|l|}
+            \hline
+            \textbf{Name} & \textbf{Year} & \textbf{Algorithm/model}                                 \\ \hline
+            FIGER         & 2012          & Classic linear classifier (uses coarse-grained entities) \\ \hline
+            Hyena         & 2012          & Supervised learning using a hierarchical classifier      \\ \hline
+            DeepWalk      & 2014          & Random walk                                              \\ \hline
+            LINE          & 2015          & Second-order random walk on a bipartite graph            \\ \hline
+            HNM           & 2015          & Neural network                                           \\ \hline
+            WSABIE        & 2015          & Feature and type representation                          \\ \hline
+            ClusType      & 2015          & Relation phrase-based                                    \\ \hline
+            PTE           & 2015          & Bipartite graphs                                         \\ \hline
+            AFET          & 2016          & Distant supervision                                      \\ \hline
+            FETC          & 2017          & Neural network                                           \\ \hline
+            HCR           & 2019          & Contextualized hierarchical representation               \\ \hline
+            PCE           & 2019          & Pre-trained language model                               \\ \hline
+            FGN           & 2020          & Glyph fusion network                                     \\ \hline
+            FSeqC         & 2020          & Seq2Seq neural network                                   \\ \hline
+        \end{tabular}
+    \end{table}
+\end{center}
+
+Sequential deep learning models often exhibit better performance for FGNER. However, these models also require a significant amount of labeled data. Therefore, these models have been combined with the weak supervision paradigm [17] and machine learning techniques such as reinforcement learning or transfer learning [18] to recognize fine-grained named entities using unlabeled data sources or in cases where the manually labeled data quantity is not substantial [19].
+
+\subsection{NER in Legal Texts}
+
+In the legal domain, NER is a fundamental task for the integration of artificial intelligence in this field [15]. Once entities are extracted, document analysis can provide assistance to various stakeholders in the legal system [22], such as lawyers, judges, plaintiffs, and defendants. After entities are extracted, it is also possible to identify relationships between these entities, enabling the construction of legal ontologies to represent this knowledge [50], as well as intelligent mind maps for easy navigation through various concepts. These mind maps are of great importance in terms of intelligent interfaces, as they highlight key concepts found in the texts [11].
+
+In the legal domain, which is a closed domain, various types of legal texts can be found, such as judgments, contracts, and foreclosure documents [7]. Judgment documents can be issued by different types of courts, such as civil, criminal, constitutional, etc. [3], [19], [23], [50]. The named entities considered relevant for identification can vary depending on the type of document. For example, for decisions from the German court, 19 fine-grained entities were defined [23], while for the analysis of a foreclosure process in Italy, only 8 fine-grained entities were defined [7].
+
+In some cases, the NER task is not performed on the text of the documents, but instead, semi-structured format documents like XML are used [21]. In the case of documents such as contracts, if available, they are often encoded, representing words in a vectorized form, due to containing sensitive data [32]. Due to the differences between document types, the categories of named entities recognized, and the language, comparing the results obtained in different research efforts is not an easy task.
+
+In legal texts such as laws and administrative regulations, the occurrence of named entities such as persons, locations, and organizations is very low. In contrast, in documents related to court decisions, these entities have a higher occurrence, along with references to national or supranational laws, other decisions, and regulations. Therefore, the categories used should reflect those named entities that are typical for decisions, and typology in legal documents should pertain to entities whose differentiation is highly relevant [23]. Consequently, NER algorithms in legal texts must balance generalization for high-occurrence categories and discrimination for low-occurrence categories.
+
+The format of legal documents and the language used in legal texts often differ from those employed in news or newspapers, which belong to an open domain. However, the NER process itself doesn't vary significantly when working with texts from an open domain or another closed domain. It still involves activities such as data collection, pre-processing, text representation, developing a classification model, and evaluating results [11], [21].
+
+The difference lies in the methods used to carry out these activities. For example, in data collection, dataset labeling is often done manually in the legal domain [3], [11], [21], [23]. In the open domain, distant supervision is frequently used for automatic dataset generation [6], [14], [18], [25], [27], [29].
+
+To assess the performance of an NER system in the legal domain in terms of metrics like recall, precision, and F1-score, results for coarse-grained entities are considered to enable comparisons of the model's performance against the state of the art [23]. This is because fine-grained legal entities defined within datasets tend to differ, even though they belong to the legal domain. It is not possible to directly compare one model to another if the datasets used do not share the same vocabulary and entities. Therefore, by using coarse-grained entities, such as those defined in CoNLL 2002/2003, it becomes possible to compare performance across different models [3], [23].
+
+Rule-based NER systems in the legal domain often exhibit high precision but require extensive grammatical knowledge and specific language expertise [12]. Additionally, there are few cases where rules alone are used for legal entity recognition [50]. To cover the majority of entities with minimal labeled data, the use of rules has been combined with ontologies, despite the high cost associated with annotating data in an ontology [30], [50].
+
+On the other hand, in rule-based NER systems, the use of the discriminative algorithm Conditional Random Field (CRF) has been prominent in the legal domain [11], [21], [22], [50]. CRF doesn't require as much data as deep learning neural network models (DL), but its performance can degrade when dealing with an increased number of entities [2]. In contrast, generative models like Hidden Markov Model (HMM) and Maximum Entropy Markov Model (MEMM) tend to slightly improve their performance with an increase in entities [11], [22]. Table 4 presents the main methods used for entity recognition in legal texts and the languages in which this task was performed.
+
+\begin{center}
+    \begin{table}[h]
+        \centering%
+        \caption{Methods for entity recognition in legal texts}
+        \label{tab:legal-ner}
+        \begin{tabular}{|l|l|l|}
+            \hline
+            \textbf{Method} & \textbf{Year} & \textbf{Language}   \\ \hline
+            CRF             & 2019          & English, Vietnamese \\ \hline
+            BiLSTM-CRF      & 2019          & English, German     \\ \hline
+            BiLSTM-CNN-CRF  & 2019          & German              \\ \hline
+            HMM             & 2019          & English (Pakistan)  \\ \hline
+            MEMM            & 2019          & English (Pakistan)  \\ \hline
+            BiLSTM-CRF      & 2018          & Portuguese          \\ \hline
+            Rules           & 2018          & German              \\ \hline
+            Ontology        & 2017          & Italian             \\ \hline
+            CRF             & 2015          & Vietnamese          \\ \hline
+        \end{tabular}
+    \end{table}
+\end{center}
+
+Deep learning-based NER systems perform better in legal texts compared to other approaches, especially those that incorporate layers with Bidirectional Long Short Term Memory (BiLSTM) recurrent neural networks for languages like English, Portuguese, or German. These models are often used in conjunction with Conditional Random Fields (CRF) in the final layer of the model to maintain entity labeling sequencing, particularly for entities that span multiple words [3]. However, the labeled datasets used have typically been manually annotated [3], [11], [20]-[23], [51], indicating a high dependence on legal or linguistic experts for data labeling.
+
+\section{Linguistic features}
+
+The linguistic features used to generate rules include Parts of Speech\footnote{https://universaldependencies.org/u/pos/} (POS) and dependency grammar\footnote{https://universaldependencies.org/u/dep/} (Dep). POS provides valuable information about sentence structure and meaning. For instance, knowing whether a word is a noun or a verb can give insights into likely neighboring words, such as nouns being typically preceded by determiners and adjectives, while verbs are usually followed by nouns \cite{martin-2020-speech} and Dep provides information about the syntactic structure of a sentence\cite{martin-2020-speech}.
+
+
+\section{Weak supervision}
+
+The goal of weakly supervised modeling is to reduce the reliance on manually labeled data for training supervised machine learning models [17]. However, these data sources often come with noise, meaning they may contain incorrectly labeled data [10]. The primary challenge of weak supervision is to find a way to effectively combine multiple sources of knowledge, such as rules, heuristics, knowledge databases, and collaboratively labeled databases [34].
+
+The most popular form of weak supervision is distant supervision, where records from an external knowledge database are heuristically aligned with data to automatically label documents with entities known to belong to a particular category [17]. This process is often supported using databases that include labels from collaborative tagging, which can sometimes introduce noisy labels [34]. It operates under the assumption that if a text string is included in a predefined entity dictionary, the string could represent an entity [19]. Depending on the database, this entity will be defined in a particular category. For example, "Monopoly" might be included in a predefined database as a game entity, but in the text, it might refer to a brand entity [16].
+
+
+In practice, automatically labeled data faces two problems that negatively impact NER system performance: incomplete labels and noisy labels. The issue of incomplete labels means that not all entities have been included in the databases used for querying. The problem of noisy labels means that the matched entity doesn't correspond to the definition of the entity [19].
+
+Weak supervision frameworks offer Labeling Functions (LFs) and Heuristic Functions (HFs) that allow injecting expert knowledge from various knowledge sources to reduce the noise that can be generated. This knowledge is essential when data is scarce or nonexistent [17]. These frameworks employ various statistical methods to unify labels; for example, in the Snorkel framework, discriminative models are used [34]. However, due to the difficulty of these frameworks in adapting to sequential labeling tasks, models based on extensions of Hidden Markov Chains (HMMs) have been proposed [17].
+
+\section{Evolutionary algorithms}
+
+
+Evolutionary algorithms (\textbf{GAs}) are inspired by the process of natural evolution. In a given environment, there is a population of individuals striving to survive and reproduce, where each individual represents a tentative solution to a specific problem\cite{eiben-2015-speech}.
+
+An individual is a dual entity: its phenotypic (external) properties are represented at the genotypic (internal) level. Genes are the functional units of heredity that encode phenotypic characteristics\cite{eiben-2015-speech}. The values that a gene can take are called alleles, and the one whose value is initially assigned is determined by the initiation method called the \textbf{initial population}.
+
+To measure the quality of the solution, the fitness function (often referred to as \textbf{evaluation}) is applied to each individual in the population\cite{eiben-2015-speech}. This function assigns a real number to each solution, and typically, individuals with the highest fitness values are selected for reproduction.
+
+The new candidate solutions are created using variation operators (often referred to as \textbf{variation}), such as crossover and mutation, and their fitness is calculated. These processes are iterated until a predefined termination criterion is met, such as achieving the desired solution quality or reaching the maximum number of evaluations.
+
+
+\subsection{Genetic Programming}
+
+\subsection{Grammatical Evolution}
+
+
+\subsection{Grammatical Evolution for NER}

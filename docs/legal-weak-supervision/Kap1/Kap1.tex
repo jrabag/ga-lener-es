@@ -1,0 +1,89 @@
+\chapter{Introduction}
+
+% En la introducci\'{o}n, el autor presenta y se\~{n}ala la importancia, el origen (los antecedentes te\'{o}ricos y pr\'{a}cticos), los objetivos, los alcances, las limitaciones, la metodolog\'{\i}a empleada, el significado que el estudio tiene en el avance del campo respectivo y su aplicaci\'{o}n en el \'{a}rea investigada. No debe confundirse con el resumen y se recomienda que la introducci\'{o}n tenga una extensi\'{o}n de m\'{\i}nimo 2 p\'{a}ginas y m\'{a}ximo de 4 p\'{a}ginas.
+
+% La presente plantilla maneja una familia de fuentes utilizada generalmente en LaTeX, conocida como Computer Modern, espec\'{\i}ficamente LMRomanM para el texto de los p\'{a}rrafos y CMU Sans Serif para los t\'{\i}tulos y subt\'{\i}tulos. Sin embargo, es posible sugerir otras fuentes tales como Garomond, Calibri, Cambria, Arial o Times New Roman, que por claridad y forma, son adecuadas para la edici\'{o}n de textos acad\'{e}micos.
+
+% La presente plantilla tiene en cuenta aspectos importantes de la Norma T\'{e}cnica Colombiana - NTC 1486, con el fin que sea usada para la presentaci\'{o}n final de las tesis de maestr\'{\i}a y doctorado y especializaciones y especialidades en el \'{a}rea de la salud, desarrolladas en la Universidad Nacional de Colombia.
+
+% La redacci\'{o}n debe ser impersonal y gen\'{e}rica. La numeraci\'{o}n de las hojas sugiere que las p\'{a}ginas preliminares se realicen en n\'{u}meros romanos en may\'{u}scula y las dem\'{a}s en n\'{u}meros ar\'{a}bigos, en forma consecutiva a partir de la introducci\'{o}n que comenzar\'{a} con el n\'{u}mero 1. La cubierta y la portada no se numeran pero si se cuentan como p\'{a}ginas.
+
+% No se debe utilizar numeraci\'{o}n compuesta como 13A, 14B \'{o} 17 bis, entre otros, que indican superposici\'{o}n de texto en el documento. Para resaltar, puede usarse letra cursiva o negrilla. Los t\'{e}rminos de otras lenguas que aparezcan dentro del texto se escriben en cursiva.
+\section{Motivation}
+
+% En todos los países, el sistema legal es siempre una de las partes más importantes que garantiza la seguridad y el desarrollo de la sociedad [21], donde la mayoría de los recursos generados se encuentran en forma de textos [52], por lo tanto, los sistemas inteligentes pueden ayudar a la eficacia de los procesos legales [11] con la revisión automática de los antecedentes y literatura relacionada [30], permitiendo a jueces y abogados optimizar su tiempo [53], al recuperar textos legales relevantes, identificar entidades claves [30], acceso más eficiente a la información disponible [6], explotación rápida y extensiva de la jurisprudencia [50]. Además, cuando se analizan los datos en los textos legales, esto puede proporcionar a los dirigentes políticos una gran visión de los problemas actuales que enfrenta la sociedad, analizar las tendencias de la sociedad en términos de diversos problemas civiles y penales, por lo tanto, se puede deducir que el procesamiento de datos legales tiene una gran importancia en el contexto social y personal [22], y de esta forma contribuir a la transformación de la administración pública [20].
+% Dado que los recursos desarrollados en el dominio legal están en su mayoría en formato de texto y la mayoría de recursos para el dominio legal no se encuentran disponibles para NLP en español [20], entonces realizar NER con pocos datos manualmente etiquetados juega un papel importante en la integración de la inteligencia artificial con el sistema legal, pues esto puede reducir el tiempo que le toma a los profesionales del derecho recuperar y comprender documentos legales al obtener información relevante de entidades como abogado, testigo, juez o demandante entre otras. Incluso este conocimiento puede servir como una forma asequible de asistencia legal para aquellos que no están familiarizados con este ambiente [52]. Esto también brinda la posibilidad de analizar y representar documentos legales cambiando las entidades de grano fino sin gastar una gran cantidad de tiempo en el etiquetamiento de los conjunto de datos ni depender de un experto para realizar esta tarea [3], [10], [53].
+\section{Problem Statement}
+
+% Cuando se usan métodos basados en reglas para NER en el dominio legal, se suele tener una gran precisión pero la principal obstrucción con esta técnica es que se requiere un gran conocimiento gramatical y experiencia particular en un lenguaje [12] y su mantenimiento es costoso debido al hecho de que las reglas son bastantes sensibles a los cambios en cuanto a su orden y dependencia con otras reglas [51]. Por otro lado, el enfoque basado en aprendizaje de máquina (ML) para NER requiere de una gran cantidad de datos etiquetados para obtener conocimiento del lenguaje, especialmente los modelos de aprendizaje profundo (DL) [10], [12]–[14]. Por lo tanto, recolectar estos datos continúa siendo el principal obstáculo en muchas tareas de NLP [28] y los conjuntos de datos que se han generado no están disponibles para todos los lenguajes ni dominios [15], [19], [35], pues su construcción a mano es un proceso tedioso, lento  y complejo al ser realizado por personas [3], [10], [53]. En algunos casos, aunque el proceso de generación de conjuntos de datos etiquetados ha sido realizado para un lenguaje, estos conjuntos no son de libre acceso por asuntos de confidencialidad [23]. 
+% Los modelos de aprendizaje profundo (DL) como las redes BiLSTM tienen mejor rendimiento para NER que los modelos lineales y estadísticos y no dependen de características hechas a mano [15], sin embargo, requieren de una gran cantidad de datos para su correcto funcionamiento [10]. A pesar de ser el español uno de los lenguajes más ampliamente hablados, la mayoría de los recursos para realizar tareas de procesamiento de lenguaje natural se encuentran principalmente para el lenguaje inglés [20]. Además se debe tener en cuenta que los textos legales están compuestos frecuentemente de oraciones largas [21] con términos ambiguos y complejos [51], por lo cual, el análisis y el procesamiento automático de los textos se convierte en un desafío.
+% Por lo cual, se propone el desarrollo de un modelo de reconocimiento de entidades legales en español usando pocos datos etiquetados, donde se usen fuentes externas de conocimiento para generar una gran cantidad de datos etiquetados de forma semiautomática usando el método de supervisión débil y con esta cantidad de datos se puedan usar modelos de alta precisión como redes neuronales de aprendizaje profundo, ya que estas no dependen de las características generadas manualmente para aprender la sintaxis de un lenguaje. Por lo tanto, se plantea la siguiente pregunta de investigación: ¿Cómo se pueden reconocer entidades de grano fino en textos legales en español usando supervisión débil?
+\section{Objectives}
+
+\subsection{General Objective}
+
+% Desarrollar un modelo para el reconocimiento de entidades de grano fino en textos legales usando supervisión débil.
+% \subsection{Specific Objectives}
+% • Generar conjuntos de datos a partir de documentos legales de sentencias colombianas públicamente disponibles usando técnicas de extracción, transformación y cargue de información.
+% • Crear un proceso para etiquetar de forma manual y automática los documentos de los conjuntos de datos generados con entidades legales de grano fino usando el método de supervisión débil.
+% • Desarrollar una estrategia de clasificación de entidades de grano fino con aprendizaje profundo usando los datos anteriormente etiquetados.
+% • Evaluar en conjunto las métricas del etiquetamiento de datos y el desempeño de la estrategia de clasificación por medio de métodos cuantitativos.
+\section{Scope}
+\section{Methodology}
+% Para alcanzar los objetivos, el diseño de la investigación tiene como base un tipo de investigación descriptiva con un diseño experimental, este diseño se apoya en una estrategia cuantitativa que usa métodos cuantitativos [54]. El tipo de estudio del proyecto de tesis de maestría es descriptivo, donde se realizará una descripción de los métodos usados para reconocer entidades legales en otros idiomas y los documentos recolectados serán sintetizados usando estadística descriptiva de las palabras en los textos, esto con el objetivo de organizarlos [55] y obtener una aproximación al tipo de contenido tratado en los textos. La escala de medición para los textos de los documentos legales es de tipo nominal.
+% El diseño de la investigación es experimental, se compone de 4 fases que se realizarán de manera iterativa (2 iteraciones), siendo el texto contenido en los documentos la variable independiente, los conjuntos de datos etiquetados actúan como la variable moderadora y la clasificación de las palabras en entidades nominales de grano fino actúan como la variable dependiente del experimento. En cada una de las iteraciones se realizarán variaciones en cuanto a la selección de los documentos que serán etiquetados manualmente, lo cual afecta a los conjuntos de datos que se generan de forma automática, por lo tanto, se podrá evaluar cómo dadas las características de los textos y la selección aleatoria de los conjuntos de datos afecta el desempeño de la estrategia de aprendizaje para el reconocimiento de entidades de grano fino. El desempeño de la estrategia de aprendizaje será medido usando métodos cuantitativos como precisión, recall y f1-score. Para medir la consistencia del etiquetamiento del conjunto de datos se usará el coeficiente Kappa de Cohen [56].
+
+% Fases del diseño de la investigación.
+
+% Figura 2. Elaboración propia
+
+% Como se muestra en la figura 2, las fases del diseño de la investigación son: generación de conjuntos de datos, etiquetamiento, aprendizaje y evaluación. Estas fases están directamente relacionadas con cada uno de los objetivos específicos y se describen en las siguientes subsecciones. Para cada una de las fases la documentación es una actividad que es realizada de forma transversal y además como control a esta actividad se realizan 3 revisiones, una al finalizar la generación del conjunto de datos y otras dos se realizarán al finalizar cada iteración.
+
+%         8.1. Generación de conjuntos de datos
+
+% En esta fase se recolectarán los documentos de las sentencias seleccionadas que serán enriquecidas con la identificación de las partes del discurso y bases de datos de conocimiento externas, para lo cual, se realizarán las siguientes actividades:
+%     • Identificar fuentes de documentos legales en sitios web, donde se encuentren sentencias públicamente disponibles de la rama judicial colombiana.
+%     • Seleccionar fuentes de datos de acuerdo con las características del formato de los documentos de las sentencias y el proceso que se debe realizar para obtener los documentos automáticamente.
+%     • Crear un proceso de extracción, transformación y carga por medio de un programa desarrollado en Python1 que permita obtener los documentos de las fuentes seleccionadas y almacenar los textos con las partes del discurso (PoS) obtenidas del uso de herramientas como Spacy2.
+%     • Crear un proceso que a partir de los sustantivos identificados en las partes del discurso obtenga los descriptores ontológicos de fuentes de datos externas como Wikidata3 y DbPedia4.
+
+% Al finalizar esta fase se obtendrá un conjunto de datos que contienen los textos de las sentencias seleccionadas, las partes del discurso de cada sentencia, y los descriptores ontológicos de los sustantivos identificados en las sentencias que puedan ser encontrados en bases de datos de conocimiento externas como Wikidata y Dbpedia. Los scripts y programas desarrollados para la generación del conjunto de datos se dispondrán en un repositorio de código de acceso público.
+
+%         8.2. Etiquetamiento
+
+% En esta fase se realizará el etiquetamiento de las entidades legales de grano fino de forma manual y automática usando técnicas de supervisión débil, para lo cual se desarrollarán las siguientes actividades:
+
+%     • Crear reglas para la identificación de entidades legales usando el texto de las sentencias y las partes del discurso identificadas.
+%     • Crear reglas para la identificación de entidades legales usando los descriptores ontológicos de Wikidata y DBpedia a partir de los sustantivos del texto de las sentencias.
+%     • Seleccionar los documentos para el etiquetamiento manual a partir de los tópicos que se identifiquen al usar el algoritmo de Asignación Latente de Dirichlet (LDA).
+%     • Realizar el etiquetamiento manual de las sentencias seleccionadas en la plataforma de etiquetamiento de datos WebAnno5.
+%     • Transformar las entidades etiquetadas al esquema IOB2 usando la plataforma WebAnno y un script escrito en Python.
+
+% Al finalizar esta fase se obtendrán conjuntos de datos de entidades legales en formato IOB2 y un artículo con la descripción de los procesos realizados. El conjunto de datos generados a partir del etiquetamiento manual es el Standard Gold y los conjuntos de datos generados a partir de las reglas y los descriptores ontológicos es llamado Standard Silver. Estos conjuntos de datos se encontrarán en el esquema IOB2 y se dispondrán para que puedan ser accesibles al público.
+
+
+%         8.3. Aprendizaje 
+
+% En esta fase se crearán los componentes necesarios para implementar la estrategia de aprendizaje que permita reconocer entidades en textos legales usando los conjuntos de datos Standard Silver y Standard Gold. Para esta fase se realizarán las siguientes actividades:
+
+%     • Integración de las entidades etiquetadas de los conjuntos de datos Standard Silver y Standard Gold usando el framework Snorkel6. Este framework será usado para la generación de un nuevo conjunto de datos de entrenamiento para el modelo de aprendizaje de máquina. Para esta integración solo se usará una porción del conjunto de datos Standard Gold.
+%     • Creación de un componente de preprocesamiento para los textos de las sentencias, donde se obtenga la representación vectorial de los textos. Este componente estará desarrollado en Python.
+%     • Diseñar una arquitectura para el modelo de aprendizaje de máquina para el reconocimiento de entidades legales.
+%     • Generar un modelo de aprendizaje de máquina usando redes neuronales recurrentes que serán desarrolladas en PyTorch7, donde se identifiquen las entidades legales de una sentencia usando la representación vectorial obtenida del componente de preprocesamiento.
+
+% Al finalizar esta fase se habrá generado un modelo de aprendizaje de máquina que a partir de un texto identifique entidades legales de grano fino. El código para la generación del modelo se encontrará en un repositorio de código con acceso público. 
+
+%         8.4. Evaluación
+
+% En esta fase se evaluará el desempeño del modelo usando un conjunto de datos de validación y de pruebas. Estos datos hacen parte del conjunto de datos Standard Gold que no han sido usados en la etapa de generación del modelo. Además, también se evaluará la consistencia del etiquetamiento a fin de determinar la confiabilidad de los resultados obtenidos.
+
+%     • Validación del modelo usando cross validation a través de las métricas precision, f1-score y recall y un subconjunto de datos del Standard Gold (datos no usados en generación del modelo).
+%     • Interpretación de los resultados generados usando el método cuantitativo LIME [57].
+%     • Medir el desempeño del modelo usando las métricas precision, f1-score y recall y un subconjunto de datos para pruebas, que son parte del Standard Gold, estos datos no han sido usados en la generación ni en la validación del modelo.
+%     • Medir la fiabilidad del modelo del reconocimiento de entidades usando los resultados de la prueba del modelo y la consistencia del etiquetamiento usando el coeficiente Kappa de Cohen [56].
+
+% Al finalizar esta fase se tendrá un artículo con los resultados de la validación y prueba del modelo, la interpretación de los resultados que pueda ser obtenida de usar LIME y el valor del coeficiente Kappa de Cohen de los datos etiquetados. Además, también se entregará la tesis de grado.
+\section{Organization of the Document}
+\section{Contribution}
+
+

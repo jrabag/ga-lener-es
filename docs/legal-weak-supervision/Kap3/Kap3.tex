@@ -1,0 +1,394 @@
+\chapter{Grammatical Evolution for NER}
+
+\section{Introduction}
+
+Named Entity Recognition (NER) is a sequence labeling task where the objective is to assign a tag to each word in a sentence. Achieving better performance often requires a large volume of data, which may not always be readily available and can be challenging to obtain for new domains. This is because human experts are typically required for the annotation process, making the generation of new labeled data both costly and time-consuming. While some approaches aim to reduce manual labeling efforts, they often rely on domain experts to provide heuristic rules or domain-specific dictionaries. Therefore, a significant challenge lies in crafting high-precision rules for effective NER\cite{ma-etal-2022-label, Huang2020FewShotNE, Shang2018, Fries2017, Safranchik2020, Lison2020}.
+
+In this research, the proposed method demonstrates the capability to acquire syntactic rules using multimodal evolutionary algorithms for Named Entity Recognition (NER) even when only a limited amount of labeled data is available. These rules are built based on linguistic features such as Parts of Speech (PoS), Grammatical Dependencies (Dep), or textual context. They enable the algorithm to deduce rules for unknown words by identifying the linguistic characteristics of tokens neighboring the entity in question.
+
+The method explored in this study has the capacity to generate multiple rules for each entity, each with moderate precision. This approach aligns with Holland's theory of adaptation, which emphasizes the importance of niche environments and speciation dynamics \cite{holland-1992-adaptation}. In this context, competition between niches, facilitated by sharing functions and migrations between islands, leads to the emergence of subpopulations and the partitioning of the environment.
+
+The islands model fosters population speciation by creating isolated subpopulations. These subpopulations are linked through a migration operator, enabling the exchange of information between them, as described by Holland \cite{holland-1992-adaptation}. The migration operator serves to preserve population diversity, preventing premature convergence and the extinction of subpopulations.
+
+In the context of this island model proposal, each island utilizes a distinct sentence dataset. Additionally, each island possesses a dataset related to specific features, fostering the convergence of speciation around these features. This niche-based approach enables individuals to exploit the current environmental features effectively. Consequently, dominant versions of an entity can be swiftly eliminated. For example, rules that predominantly identify the entity "person" (\textbf{PER}) might perform poorly on islands where the primary entity in the documents is an "organization" (\textbf{ORG}).
+
+To select the best rules for each generation, firstly the fitness of the rules is calculated based on the RlogF \cite{seman_lex}, then the shared fitness is calculated to reduce competition between individuals with a similar goal and a different solution, thus maintains a more diverse population \cite{goldber_mul}, finally a pseudo-order is applied, where parents compete with their children in a tournament, in order to select the rules with the best fit. The losers of a round can compete with the children of the neighbors. For the selection an elitist approach is used, so the pseudo ordering is allowed to select the individuals with the best fitness between the parents and their offspring, reducing the algorithmic complexity, and in some cases allowing individuals with low performance to be part of the group. the next generation
+
+The majority system is used to tag the span entity, where each rule emit a vote for the category of span entity according its precision obtained in the training phase. The span entity is tagged with the category that has the most votes.
+
+The method is trained on the CoNLL 2002 \cite{tjong-kim-sang-2002-introduction} dataset. The method is implemented in several parallel architectures and the results show its scalability for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures. The results show that the method is capable of learning rules of moderate precision.
+
+The major contributions of this work are:
+\begin{itemize}
+  \item The proposed method can learn syntactic rules for NER using a small amount of labeled data.
+  \item The proposed method is scalable for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures.
+  \item The patterns learned by the proposed method can be detect linguistic features around the entity.
+\end{itemize}
+
+The code of the proposed method and data is realease for future research\footnote{https://github.com/jrabag/ga\--lener\--es/}. The rest of the paper is organized as follows:
+In section 2 the related work. In section 3 the method is presented.
+In section 4 the expetimental setup. In section 5 the results are showed. In section 6 the conclusions.
+
+
+\section{Background}
+\subsection{Genetic Algorithms}
+\subsection{Genetic Programming}
+\subsection{Grammatical Evolution}
+\subsection{Grammatical Evolution for NER}
+\section{PROPOSED MODEL}
+
+The alleles of the individuals in the population are integers that represent the value of a linguistic features. The topology used in the island model is ring. First the initial population is generated, then the population is distributed on each of the islands. A mutation operator is randomly applied to each individual, then fitness is calculated for all individuals. In the selection stage, the shared fitness is calculated and the best individuals are selected by executing the pseudo-order algorithm.
+Migration is applied every 10 generations. Below are more details of each of the steps
+
+\subsection{Individual encoding}
+
+El fenotipo esta compuesto por una secuencias de caracteriscas linguisticas, cuya longitud varia entre 1 a 7. Para identificar si la caracterisca hace parte del contexto o de una entidad, se agrega un signo negativo como prefijo, tal como se puede ver en la figura \ref{fig:fenotype}.
+
+Figure fenotype
+\begin{figure}
+  \centering%
+  \includesvg[width=3cm]{Kap3/feno_org.svg}%
+  \caption{Phenotype to an individual that detects the organization of the entity. The pattern indicates that the first two words are part of the context and the third word is part of the entity.}
+  \label{fig:fenotype}
+\end{figure}
+
+
+% Figure genotype
+\begin{figure}[ht]
+  \centering
+  \includesvg[width=8cm]{Kap3/geno_org.svg}
+  \caption{Genotype. The first position indicates that the length of the rule is 4, the second current fitness is 0.0, the third is the value of the entity, in this case 3 refers to ORG. The rest of the positions are the values of the linguistic features.}
+
+  \label{fig:genotype}
+\end{figure}
+
+The phenotype is decoded to the genotype which is represented using 10 double values. As can be seen in the figure \ref{fig:genotype}. Each individual seeks to identify the sequence of values that match the linguistic features of the sentences. The individual is encoding as follows:
+
+\begin{itemize}
+  \item \textbf{First token} is the length of the rule. The minimum value is 1 and the maximum value is 7.
+  \item \textbf{Second token} is the current fitness of the individual.
+  \item \textbf{Third Token} type of entity that the rule is related to. The minimum value is 1 and the maximum value is 4.
+  \item \textbf{Last tokens} are the tokens covered by the rule. When the rule is shorter than 7 tiles, the last tiles are padded with 0. The minimum value is 1 and the maximum value is 2784.
+\end{itemize}
+
+\subsection{Island model}
+
+Implementation Hibryd islandxGlobal
+The islands model is implements with a Topology ring as you can see in figure \ref{fig:island}. Each island is evaluated with documents that have at least 1 entity recognized by the island. In this way certain individuals may have a higher fitness than others according to island where fitness is evaluated. If the individual's entity is the same as the one recognized by the island that individuals take advantage.
+
+\begin{figure}[ht]
+  \centering
+  \includesvg[width=8cm]{Kap3/island_ae.svg}
+  \caption{Island model}
+  \label{fig:island}
+\end{figure}
+
+The island model is implemented with a ring topology as can be seen in the figure \ref{fig:island}. Each island is evaluated with documents that have at least 1 entity recognized by the island, in this way each island evaluates the performance of individuals differently. In this way, certain individuals may have a higher fitness than others depending on the island where the its fitness is evaluated. In this way, if the entity of the individual is the same as that which is mainly recognized by the island, these individuals take advantage.
+
+\subsection{Mutation}
+
+The only genetic operator used is the mutation, the options an individual can take randomly are the following:
+
+\begin{itemize}
+  \item \textbf{Allele change}: Two child are created from one parent. A gene is selected at random and replaced by an allele whose value is selected at random. One child has a positive value and the other has a negative value.
+  \item \textbf{Add a gene}: Two child are created with a random value. The position of the childs is randomly selected based on the size of the parent. One child has a positive value and the other has a negative value.
+  \item Delete a gene: A child is created from a parent. A gene is selected at random and extracted from the child. Genes to the right of the deleted gene are shifted one position to the left.
+\end{itemize}
+When creating or modifying a gene, a linguistic feature is first selected, then a value for the feature is selected. For PoS, the value is between 1 and 19, for Dep, the value is between 20 and 81, for Text, the value is between 82 and 2784.
+
+
+\subsection{Fitness function}
+
+Fitness \ref{fitness_eq} is calculated based on the document mean for the RlogF metric (\ref*{RlogF_eq})\cite{seman_lex} on each of the islands. This calculation is made after performing the mutation operation on each individual.
+
+
+\begin{equation}
+  \label{RlogF_eq}
+  RlogF(Ind) = \frac{F_i}{N_i} {\log_2}({F_i})
+\end{equation}
+
+\begin{equation}
+  \label{RlogF_eq2}
+  RlogF(i,\alpha,\beta) = \alpha\frac{F_i}{N_i} + \beta{\log_2}({F_i})
+\end{equation}
+
+\begin{equation}
+  \label{fitness_eq}
+  fitness(r) = \frac{1}{N} \sum_{i=1}^{N} RlogF(r_i)
+\end{equation}
+
+The RlogF metric is a weighted conditional probability, where the pattern is scored high if a high percentage of its extractions are members of category\cite{seman_lex}, where ${F_i}$ is the number of intervals successfully extracted for the feature,
+and ${ N_i}$ is the number of spans extracted for the feature. The factor ${\log_2}({F_i})$ represents the ability of the rule to cover more spans \cite{tallor}.
+
+The share function \ref{shared_eq} is computed after the fitness function. Both parents and children are taken to measure the cosine distance between individuals, taking from 2 tokens to 10 tokens. \ref{shared_eq_ind} is calculated on each island to maintain diversity in its population.
+
+\begin{equation}
+  \label{cosine_distance}
+  d(a, b) = 1- \frac{a \cdot b}{\|a\| \|b\|}
+\end{equation}
+
+
+\begin{equation}
+  \label{shared_eq}
+  sh(d) = \left \{
+  \begin{array}{l}
+    1  - \frac{d}{\sigma_{share}}, d < {\sigma_{share}} \\
+    0, otherwise
+  \end{array}
+  \right \}
+\end{equation}
+
+$$
+  \text{f}^{d_{t}}_{i}(\alpha,\beta) =
+  \alpha \text{ precision} + \beta \text{ seq}^{d_{t}}_{i}
+$$
+
+$$
+  \text{ seq}^{d_{t}}_{i} = \frac{\text{similarity\_accumulator}}{\text{total\_matches}} + \frac{\log_2(\text{individual\_size})}{\log_2(7)}
+$$
+
+
+\begin{equation}
+  \label{shared_eq_ind}
+  f^t_i = \frac{f_i}{\sum_{j=1}^N sh(d_{i,j})}
+\end{equation}
+
+\subsection{Selection}
+
+To select the individuals that will be used in the next generation, a pseudo ordering\ref{alg:pseudo_sort} was carried out as a tournament selection on each island, where parents compete with their children.
+
+The tournament is carried out as follows: in the first stage parents and children compete with the neighbor on the right, in the parent population the winner moves one place to the left, in the offspring the winner move one place to the right. In the figure \ref{fig:pseudo_sort} P2 is the winner, then P1 moves to position zero and P1 moves to position 1, C11 is the winners, then C11 moves to position 1. In the second stage, to select the winner of parent's position $i$, then a parent competes  with the an offspring in position $i * 2$ and position $i * 2 + 1$. The winner takes with the parent's position, so this will be part of the next generation. In the figure \ref{fig:pseudo_sort} C11 is the winner between P2 and C12, then C11 moves to position 0 of the parent population, C11 is the selected individual. The process is repeated until the population is complete.
+
+
+
+\begin{figure}[ht]
+  \centering
+  \subfloat[Stage 1]{
+    \includesvg[width=2.7cm]{Kap3/sort_a.svg}
+    \label{fig:pseudo_sort_1}
+  }
+  \subfloat[Stage 2]{
+    \includesvg[width=2.7cm]{Kap3/sort_b.svg}
+    \label{fig:pseudo_sort_2}
+  }
+  \subfloat[Stage 3]{
+    \includesvg[width=2.7cm]{Kap3/sort_c.svg}
+    \label{fig:pseudo_sort_3}
+  }
+  \caption{Pseudo sorting with $i=0$. \ref{fig:pseudo_sort_1} P2 and C11 are the winners. (b) C11 is the winner between P2 and C12. (c) is the state of the population after the sorting for first iteration.}
+  \label{fig:pseudo_sort}
+\end{figure}
+
+
+% Pseudo Code of pseudo sorting
+
+\begin{algorithm}[H]
+  \caption{Pseudo sorting}
+  \label{alg:pseudo_sort}
+  \begin{algorithmic}[1]
+    \State \textbf{Input:} Population $P$ and Offspring $C$
+    \State \textbf{Output:} Population $P$
+    \State $i \gets 0$
+    \While{$i < |P|-1$}
+    \State $P_i \gets$ Select $P_i$ and $P_{i+1}$
+    \State $C_{i*2+1} \gets$ Select $C_{i*2}$ and $C_{i*2+1}$
+    \State $P_i \gets$ Select $P_i$ and $C_{i*2}$ and $C_{i*2+1}$
+    \State $P_i \gets$ Select winner
+    \State $i \gets i + 1$
+    \EndWhile
+    \State \textbf{Return} $P$
+  \end{algorithmic}
+\end{algorithm}
+
+
+\subsection{Tagging}
+
+
+Majory votes to tagged a entity span. The entity type is the one that has the highest number of votes. If there is a tie, the entity type is selected randomly. The weight of each vote is the precision of the individual that generated the entity. Every  unmatched  token  will  be  tagged  as  non-entity
+
+The majority voting system is used to label a range of functions. The entity type is the one with the highest number of votes, where the confidence of each vote is determined by the accuracy of the rule obtained after training. If there is a tie, the entity type is randomly selected.
+
+The entity span that has been voted as an entity is assigned if the weighted sum of the votes is greater than the threshold. The threshold is the maximum between 0.5 and the sum of half the votes. If the sum of the votes is less than the threshold, the entity is not assigned.
+
+%Sample of matrix%
+
+% Threshold equation
+\begin{equation}
+  \label{threshold_eq}
+  threshold = max(\frac{1}{2} \sum_{i=0}^{N} v_i, 0.5)
+\end{equation}
+
+% Sample majority vote
+
+\section{EXPERIMENTAL SETUP}
+
+\subsection{Settings}
+
+% Description of datasets
+The datasets used in this paper is connll 2002\cite{tjong-kim-sang-2002-introduction}.The data represents news wire covering two languages: Spanish and Dutch. For the experiments only Spanish data is used. The data is divided into 3 sets: train, development (testa) and test (testb). The dataset is annotated by four entity types: persons (PER), organizations (ORG), locations (LOC), and miscellaneous names (MISC).
+
+The vocabulary used is built using train dataset using the following steps:
+\begin{itemize}
+  \item Get linguistic features from the train dataset.
+  \item The words are converted to lowercase.
+  \item The words with frequency less than 10 are removed.
+  \item The words are sorted by frequency.
+  \item The words are converted to integers starting from 1.
+  \item Token special are added to the vocabulary such as \textit{[unk]},  \textit{[pad]}, \textit{[cls]} and \textit{[sep]}. The \textit{[unk]} token is used for words that are not in the vocabulary or low frequency. The \textit{[pad]} token is used to pad the sentences. The \textit{[cls]} token is used to indicate the beginning of the sentence. The \textit{[sep]} token is used to indicate the end of the sentence.
+\end{itemize}
+
+To obtain the linguistic features, the Spacy's Spanish model\footnote{https://spacy.io/models/es} was used, which implements a transformer model (dccuchile/bert\--base\-spanish\-www\--cased) for tokenization, POS labeling, and dependency analysis.
+
+% Description of parameters
+To train the model, the following parameters are used:
+\begin{itemize}
+  \item Population size: \textit{1200}
+  \item Number of generations: \textit{1000}
+  \item Number of islands: \textit{8}
+  \item Migration interval: \textit{10 generations}
+  \item Number of sentences: \textit{200 sentences} with entities are selected randomly of train dataset.
+\end{itemize}
+
+% Metrics
+
+% Preprocessing (tokenization, lemmatization, wordembedding, etc)
+
+For the experiment, the population is divided into 8 islands. Each island has 150 individuals who recognize a person (PER), location (LOC), organization (ORG), or miscenlanius (MISC). The init population is generated with a positive random value in a first gene, the rest of the genes will have a value of 0. The gene that indicates the entity to be recognized is uniformly distributed in the population.
+
+\subsubsection{Tagging}
+
+To evaluated quality of rules the following metrics are used:
+\begin{itemize}
+  \item recall: Represents the recall effect of a certain class, it is to predict the correct retrieve frequency in the examples with positive samples as shown in equation \ref{recall}.
+  \item precision: Represents the precision effect of a certain class, it is to predict the correct match frequency in the examples with positive samples as shown in equation \ref{precision}.
+  \item f1-score: Represents the harmonic mean of recall and precision as shown in equation \ref{f1}.
+\end{itemize}
+
+\begin{equation}
+  \label{recall}
+  R = \frac{TP}{TP + FN}
+\end{equation}
+
+\begin{equation}
+  \label{f1}
+  F1_{Score} = \frac{2*P*R}{P + R}
+\end{equation}
+
+\begin{equation}
+  \label{precision}
+  P = \frac{TP}{TP + FP}
+\end{equation}
+
+
+% LOC       0.50      0.55      0.52       284
+% MISC       0.71      0.06      0.11       163
+% O       0.95      0.98      0.97      6101
+% ORG       0.52      0.26      0.35       327
+% PER       0.44      0.56      0.49       231
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+    \textbf{}     & \textbf{precision} & \textbf{recall} & \textbf{f1-score} \\ \hline
+    \textbf{PER}  & 0.44               & 0.56            & 0.49              \\
+    \textbf{MISC} & 0.71               & 0.06            & 0.11              \\
+    \textbf{ORG}  & 0.52               & 0.26            & 0.35              \\
+    \textbf{LOC}  & 0.50               & 0.55            & 0.52              \\ \hline
+  \end{tabular}
+  \caption{Traning results}
+  \label{tab:results}
+\end{table}
+
+
+% LOC       0.11      0.53      0.18       171
+% MISC       0.13      0.03      0.04       160
+% O       0.99      0.89      0.94      5319
+% ORG       0.41      0.23      0.29       329
+% PER       0.39      0.62      0.48       262
+
+\begin{table}[ht]
+  \centering
+  \begin{tabular}{|c|c|c|c|c|}
+    \hline
+    \textbf{}     & \textbf{precision} & \textbf{recall} & \textbf{f1-score} \\ \hline
+    \textbf{PER}  & 0.39               & 0.62            & 0.48              \\
+    \textbf{MISC} & 0.13               & 0.03            & 0.04              \\
+    \textbf{ORG}  & 0.41               & 0.23            & 0.29              \\
+    \textbf{LOC}  & 0.11               & 0.53            & 0.18              \\ \hline
+  \end{tabular}
+  \caption{validation results}
+  \label{tab:results_validation}
+\end{table}
+\subsection{Dataset}
+\subsection{Evaluation}
+\section{Results}
+\section{Conclusions}
+
+% Existen varias normas para la citaci\'{o}n bibliogr\'{a}fica. Algunas \'{a}reas del conocimiento prefieren normas espec\'{\i}ficas para citar las referencias bibliogr\'{a}ficas en el texto y escribir la lista de bibliograf\'{\i}a al final de los documentos. Esta plantilla brinda la libertad para que el autor de la tesis  o trabajo de investigaci\'{o}n utilice la norma bibliogr\'{a}fica com\'{u}n para su disciplina. Sin embargo, se solicita que la norma seleccionada se utilice con rigurosidad, sin olvidar referenciar "todos" los elementos tomados de otras fuentes (referencias bibliogr\'{a}ficas, patentes consultadas, software empleado en el manuscrito, en el tratamiento a los datos y resultados del trabajo, consultas a personas (expertos o p\'{u}blico general), entre otros).
+
+% \section{Ejemplos de citaciones bibliogr\'{a}ficas}
+% Existen algunos ejemplos para la citaci\'{o}n bibliogr\'{a}fica, por ejemplo, Microsoft Word (versiones posteriores al 2006), en el  men\'{u} de referencias, se cuenta con la opci\'{o}n de insertar citas bibliogr\'{a}ficas utilizando la norma APA (American Psychological Association) u otras normas y con la ayuda para construir autom\'{a}ticamente la lista al final del documento. De la misma manera, existen administradores bibliogr\'{a}ficos compatibles con Microsoft Word como Zotero, End Note y el Reference Manager,  disponibles a trav\'{e}s del Sistema Nacional de Bibliotecas (SINAB) de la Universidad Nacional de Colombia\footnote{Ver:www.sinab.unal.edu.co } secci\'{o}n "Recursos bibliogr\'{a}ficos" opci\'{o}n "Herramientas Bibliogr\'{a}ficas. A continuaci\'{o}n se muestra un ejemplo de una de las formas m\'{a}s usadas para las citaciones bibliogr\'{a}ficas.
+
+% Citaci\'{o}n individual:\cite{AG01}.
+% Citaci\'{o}n simult\'{a}nea de varios autores:
+% \cite{AG12,AG52,AG70,AG08a,AG09a,AG36a,AG01i}.
+
+% Por lo general, las referencias bibliogr\'{a}ficas correspondientes a los anteriores n\'{u}meros, se listan al final del documento en orden de aparici\'{o}n o en orden alfab\'{e}tico. Otras normas de citaci\'{o}n incluyen el apellido del autor y el a\~{n}o de la referencia, por ejemplo: 1) "...\'{e}nfasis en elementos ligados al \'{a}mbito ingenieril que se enfocan en el manejo de datos e informaci\'{o}n estructurada y que seg\'{u}n Kostoff (1997) ha atra\'{\i}do la atenci\'{o}n de investigadores dado el advenimiento de TIC...", 2) "...Dicha afirmaci\'{o}n coincide con los planteamientos de Snarch (1998), citado por Castellanos (2007), quien comenta que el manejo..." y 3) "...el futuro del sistema para argumentar los procesos de toma de decisiones y el desarrollo de ideas innovadoras (Nosella \textsl{et al}., 2008)...".
+
+% \section{Ejemplos de presentaci\'{o}n y citaci\'{o}n de figuras}
+% Las ilustraciones forman parte del contenido de los cap\'{\i}tulos. Se deben colocar en la misma p\'{a}gina en que se mencionan o en la siguiente (deben siempre mencionarse en el texto).
+
+% Las llamadas para explicar alg\'{u}n aspecto de la informaci\'{o}n deben hacerse con nota al pie y su nota correspondiente\footnote{Las notas van como "notas al pie". Se utilizan para explicar, comentar o hacer referencia al texto de un documento, as\'{\i} como para introducir comentarios detallados y en ocasiones para citar fuentes de informaci\'{o}n (aunque para esta opci\'{o}n es mejor seguir en detalle las normas de citaci\'{o}n bibliogr\'{a}fica seleccionadas).}. La fuente documental se debe escribir al final de la ilustraci\'{o}n o figura con los elementos de la referencia (de acuerdo con las normas seleccionadas) y no como pie de p\'{a}gina. Un ejemplo para la presentaci\'{o}n y citaci\'{o}n de figuras, se presenta a continuaci\'{o}n (citaci\'{o}n directa):
+
+% Por medio de las propiedades del fruto, seg\'{u}n el espesor del endocarpio, se hace una clasificaci\'{o}n de la palma de aceite en tres tipos: Dura, Ternera y Pisifera, que se ilustran en la Figura
+% \ref{fig:Fruto}.\\
+% \begin{figure}
+%   \centering%
+%   \includegraphics{Kap3/FrutoSp}%
+%   \caption{Tipos y partes del fruto de palma de aceite \cite{AG03p,AG04p}.} \label{fig:Fruto}
+% \end{figure}
+
+% \section{Ejemplo de presentaci\'{o}n y citaci\'{o}n de tablas y cuadros}
+% Para la edici\'{o}n de tablas, cada columna debe llevar su t\'{\i}tulo; la primera palabra se debe escribir con may\'{u}scula inicial y preferiblemente sin abreviaturas. En las tablas y cuadros, los t\'{\i}tulos y datos se deben ubicar entre l\'{\i}neas horizontales y verticales cerradas (como se realiza en esta plantilla).
+
+% La numeraci\'{o}n de las tablas se realiza de la misma manera que las figuras o ilustraciones, a lo largo de todo el texto. Deben llevar un t\'{\i}tulo breve, que concreta el contenido de la tabla; \'{e}ste se debe escribir en la parte superior de la misma. Para la presentaci\'{o}n de cuadros, se deben seguir las indicaciones dadas para las tablas.
+
+% Un ejemplo para la presentaci\'{o}n y citaci\'{o}n de tablas (citaci\'{o}n indirecta), se presenta a continuaci\'{o}n:
+
+% De esta participaci\'{o}n aproximadamente el 60 \% proviene de biomasa
+% (Tabla \ref{EMundo1}).
+% \begin{center}
+%   \begin{threeparttable}
+%     \centering%
+%     \caption{Participaci\'{o}n de las energ\'{\i}as renovables en el suministro
+%     total de energ\'{\i}a primaria \cite{AG02i}.}\label{EMundo1}
+%     \begin{tabular}{|l|c|c|}\hline
+%                         & \multicolumn{2}{c|}{Participaci\'{o}n en el suministro de energ\'{\i}a primaria /\% (Mtoe)\;$\tnote{1}$}                                   \\\cline{2-3}%
+%       \arr{Region}      & Energ\'{\i}as renovables                                                                                 & Participaci\'{o}n de la biomasa \\\hline%
+%       Latinoam\'{e}rica & 28,9 (140)                                                                                               & 62,4 (87,4)                     \\\hline%
+%       \:Colombia        & 27,7 (7,6)                                                                                               & 54,4 (4,1)                      \\\hline%
+%       Alemania          & 3,8 (13,2)                                                                                               & 65,8 (8,7)                      \\\hline%
+%       Mundial           & 13,1 (1404,0)                                                                                            & 79,4 (1114,8)                   \\\hline
+%     \end{tabular}
+%     \begin{tablenotes}
+%       \item[1] \footnotesize{1 kg oe=10000 kcal=41,868 MJ}
+%     \end{tablenotes}
+%   \end{threeparttable}
+% \end{center}
+
+% NOTA: en el caso en que el contenido de la tabla o cuadro sea muy extenso, se puede cambiar el tama\~{n}o de la letra, siempre y cuando \'{e}sta sea visible por el lector.
+
+% \subsection{Consideraciones adicionales para el manejo de figuras y tablas}
+% Cuando una tabla, cuadro o figura ocupa m\'{a}s de una p\'{a}gina, se debe repetir su identificaci\'{o}n num\'{e}rica, seguida por la palabra continuaci\'{o}n.
+
+% Adicionalmente los encabezados de las columnas se deben repetir en todas las p\'{a}ginas despu\'{e}s de la primera.
+
+% Los anteriores lineamientos se contemplan en la presente plantilla.
+
+% \begin{itemize}
+%   \item Presentaci\'{o}n y citaci\'{o}n de ecuaciones.
+% \end{itemize}
+
+% La citaci\'{o}n de ecuaciones, en caso que se presenten, debe hacerse como lo sugiere esta plantilla. Todas las ecuaciones deben estar numeradas y citadas detro del texto.
+
+% Para el manejo de cifras se debe seleccionar la norma seg\'{u}n el \'{a}rea de conocimiento de la tesis  o trabajo de investigaci\'{o}n.//

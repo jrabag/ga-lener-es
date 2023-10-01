@@ -1,0 +1,97 @@
+\chapter{Dataset}
+Se deben incluir tantos cap\'{\i}tulos como se requieran; sin embargo, se recomienda que la tesis  o trabajo de investigaci\'{o}n tenga un m\'{\i}nimo 3 cap\'{\i}tulos y m\'{a}ximo de 6 cap\'{\i}tulos (incluyendo las conclusiones).\\
+
+% En cada una de las iteraciones se realizarán variaciones en cuanto a la selección de los documentos que serán etiquetados manualmente, lo cual afecta a los conjuntos de datos que se generan de forma automática, por lo tanto, se podrá evaluar cómo dadas las características de los textos y la selección aleatoria de los conjuntos de datos afecta el desempeño de la estrategia de aprendizaje para el reconocimiento de entidades de grano fino. El desempeño de la estrategia de aprendizaje será medido usando métodos cuantitativos como precisión, recall y f1-score. Para medir la consistencia del etiquetamiento del conjunto de datos se usará el coeficiente Kappa de Cohen [56].
+
+% Fases del diseño de la investigación.
+
+% Figura 2. Elaboración propia
+
+% Como se muestra en la figura 2, las fases del diseño de la investigación son: generación de conjuntos de datos, etiquetamiento, aprendizaje y evaluación. Estas fases están directamente relacionadas con cada uno de los objetivos específicos y se describen en las siguientes subsecciones. Para cada una de las fases la documentación es una actividad que es realizada de forma transversal y además como control a esta actividad se realizan 3 revisiones, una al finalizar la generación del conjunto de datos y otras dos se realizarán al finalizar cada iteración.
+
+% 8.1. Generación de conjuntos de datos
+
+% En esta fase se recolectarán los documentos de las sentencias seleccionadas que serán enriquecidas con la identificación de las partes del discurso y bases de datos de conocimiento externas, para lo cual, se realizarán las siguientes actividades:
+% • Identificar fuentes de documentos legales en sitios web, donde se encuentren sentencias públicamente disponibles de la rama judicial colombiana.
+% • Seleccionar fuentes de datos de acuerdo con las características del formato de los documentos de las sentencias y el proceso que se debe realizar para obtener los documentos automáticamente.
+% • Crear un proceso de extracción, transformación y carga por medio de un programa desarrollado en Python1 que permita obtener los documentos de las fuentes seleccionadas y almacenar los textos con las partes del discurso (PoS) obtenidas del uso de herramientas como Spacy2.
+% • Crear un proceso que a partir de los sustantivos identificados en las partes del discurso obtenga los descriptores ontológicos de fuentes de datos externas como Wikidata3 y DbPedia4.
+
+% Al finalizar esta fase se obtendrá un conjunto de datos que contienen los textos de las sentencias seleccionadas, las partes del discurso de cada sentencia, y los descriptores ontológicos de los sustantivos identificados en las sentencias que puedan ser encontrados en bases de datos de conocimiento externas como Wikidata y Dbpedia. Los scripts y programas desarrollados para la generación del conjunto de datos se dispondrán en un repositorio de código de acceso público.
+
+% 8.2. Etiquetamiento
+
+% En esta fase se realizará el etiquetamiento de las entidades legales de grano fino de forma manual y automática usando técnicas de supervisión débil, para lo cual se desarrollarán las siguientes actividades:
+
+% • Crear reglas para la identificación de entidades legales usando el texto de las sentencias y las partes del discurso identificadas.
+% • Crear reglas para la identificación de entidades legales usando los descriptores ontológicos de Wikidata y DBpedia a partir de los sustantivos del texto de las sentencias.
+% • Seleccionar los documentos para el etiquetamiento manual a partir de los tópicos que se identifiquen al usar el algoritmo de Asignación Latente de Dirichlet (LDA).
+% • Realizar el etiquetamiento manual de las sentencias seleccionadas en la plataforma de etiquetamiento de datos WebAnno5.
+% • Transformar las entidades etiquetadas al esquema IOB2 usando la plataforma WebAnno y un script escrito en Python.
+
+% Al finalizar esta fase se obtendrán conjuntos de datos de entidades legales en formato IOB2 y un artículo con la descripción de los procesos realizados. El conjunto de datos generados a partir del etiquetamiento manual es el Standard Gold y los conjuntos de datos generados a partir de las reglas y los descriptores ontológicos es llamado Standard Silver. Estos conjuntos de datos se encontrarán en el esquema IOB2 y se dispondrán para que puedan ser accesibles al público.
+
+
+% 8.3. Aprendizaje
+
+% En esta fase se crearán los componentes necesarios para implementar la estrategia de aprendizaje que permita reconocer entidades en textos legales usando los conjuntos de datos Standard Silver y Standard Gold. Para esta fase se realizarán las siguientes actividades:
+
+% • Integración de las entidades etiquetadas de los conjuntos de datos Standard Silver y Standard Gold usando el framework Snorkel6. Este framework será usado para la generación de un nuevo conjunto de datos de entrenamiento para el modelo de aprendizaje de máquina. Para esta integración solo se usará una porción del conjunto de datos Standard Gold.
+% • Creación de un componente de preprocesamiento para los textos de las sentencias, donde se obtenga la representación vectorial de los textos. Este componente estará desarrollado en Python.
+% • Diseñar una arquitectura para el modelo de aprendizaje de máquina para el reconocimiento de entidades legales.
+% • Generar un modelo de aprendizaje de máquina usando redes neuronales recurrentes que serán desarrolladas en PyTorch7, donde se identifiquen las entidades legales de una sentencia usando la representación vectorial obtenida del componente de preprocesamiento.
+
+% Al finalizar esta fase se habrá generado un modelo de aprendizaje de máquina que a partir de un texto identifique entidades legales de grano fino. El código para la generación del modelo se encontrará en un repositorio de código con acceso público.
+
+% 8.4. Evaluación
+
+% En esta fase se evaluará el desempeño del modelo usando un conjunto de datos de validación y de pruebas. Estos datos hacen parte del conjunto de datos Standard Gold que no han sido usados en la etapa de generación del modelo. Además, también se evaluará la consistencia del etiquetamiento a fin de determinar la confiabilidad de los resultados obtenidos.
+
+% • Validación del modelo usando cross validation a través de las métricas precision, f1-score y recall y un subconjunto de datos del Standard Gold (datos no usados en generación del modelo).
+% • Interpretación de los resultados generados usando el método cuantitativo LIME [57].
+% • Medir el desempeño del modelo usando las métricas precision, f1-score y recall y un subconjunto de datos para pruebas, que son parte del Standard Gold, estos datos no han sido usados en la generación ni en la validación del modelo.
+% • Medir la fiabilidad del modelo del reconocimiento de entidades usando los resultados de la prueba del modelo y la consistencia del etiquetamiento usando el coeficiente Kappa de Cohen [56].
+
+% Al finalizar esta fase se tendrá un artículo con los resultados de la validación y prueba del modelo, la interpretación de los resultados que pueda ser obtenida de usar LIME y el valor del coeficiente Kappa de Cohen de los datos etiquetados. Además, también se entregará la tesis de grado.
+
+% Identificación de fuentes de datos
+% Identificar sitios web donde se puedan encontrar documentos de sentencias públicamente disponibles de la rama judicial colombiana, el formato del documento y el proceso para obtener las sentencias.
+% Selección de fuentes de datos
+% Definir las fuentes para realizar la extracción de documentos, de acuerdo con las características de su formato y del proceso que debe ser realizado para automatizar la extracción.
+
+% ETL para documentos legales.
+% Desarrollo de un ETL para automatizar la extracción de los documentos legales entre el año 2009 y 2019 para almacenarlos en una base de datos.
+% Enriquecimiento de los documentos usando PoS
+% Usar el texto de los documentos recolectados y obtener las partes del discurso (PoS) usando Spacy.
+% ETL para descriptores ontológicos de Wikidata.
+% Desarrollo de un ETL para automatizar la extracción de descriptores ontológicos de Wikidata para los sustantivos identificados en el PoS
+
+
+% ETL para descriptores ontológicos de DBPedia
+% Desarrollo de un ETL para automatizar la extracción de descriptores ontológicos de DbPedia para los sustantivos identificados en el PoS
+% Documentación V
+% Ajustar la sección de generación de conjunto de datos con su correspondiente diapositiva.
+
+
+% Crear reglas con PoS
+% Crear un conjunto de reglas para identificar entidades en textos legales a partir de las partes del discurso (PoS)
+% Crear reglas con descriptores de Wikidata
+% Crear un conjunto de reglas para identificar entidades en textos legales a partir de descriptores de Wikidata.
+% Generación de conjunto de datos Standard Silver I
+% Proceso para seleccionar automáticamente entidades identificadas entre reglas de PoS y descriptores ontológicos de Wikidata para generar datos etiquetados en esquema IOB2.
+% Selección de documentos para etiquetamiento manual
+% Asignación de tópicos usando LDA en los documentos para seleccionarlos de forma estratificada.
+% Generación de conjunto de datos Standard Gold I
+% Etiquetar los documentos seleccionados anteriormente de forma manual usando la plataforma WebAnno.
+% Documentación II
+% Documentar el proceso realizado en el etiquetamiento de documento legales y su diferencia con conjuntos de datos similares.
+% Revisión I
+% Revisión de la sección del documento sobre la generación de conjuntos etiquetados.
+% Ajuste Revisión I
+% Realizar los ajustes de la revisión I
+% Crear reglas con descriptores de DBpedia
+% Crear un conjunto de reglas para identificar entidades en textos legales a partir de descriptores de DBpedia.
+% Generación de conjunto de datos Standard Silver II
+% Proceso para seleccionar automáticamente unas de las entidades identificadas entre reglas PoS y descriptores ontológicos de Wikidata y DBPedia para generar datos etiquetados en formato IOB2
+% Documentación VII
+% Ajustar la sección de etiquetamiento en el documento de tesis con la nueva información para el procesamiento de descriptores ontológicos de Dbpedia con su correspondiente diapositiva.
