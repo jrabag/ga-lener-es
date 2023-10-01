@@ -23,9 +23,9 @@ class Feature:
     Represents a linguistic feature of a token.
     """
 
-    def __init__(self, feature: int, value: int):
+    def __init__(self, feature: int, value: Union[List[float], float]):
         self.feature = int(feature)
-        self.value = int(value)
+        self.value = value
 
     def __iter__(self):
         yield self.feature
@@ -338,22 +338,18 @@ class Vocabulary:
         return len(self.__map_id)
 
 
+@dataclass
 class Document:
     """Document class.
     Represents a document to identify entities.
     """
 
-    def __init__(
-        self,
-        tokens: List[List[Feature]],
-        entities: List[Entity],
-        vocab: Vocabulary = None,
-        vocab_ent: Vocabulary = None,
-    ):
-        self.tokens = tokens
-        self.entities = entities
-        self.vocab = vocab
-        self.vocab_ent = vocab_ent
+    tokens: List[List[Feature]]
+    entities: List[Entity]
+    vocab: Vocabulary = None
+    vocab_ent: Vocabulary = None
+    embeding_func: Callable = None
+    emb_size: int = 1
 
     def __iter__(self):
         """
@@ -377,7 +373,10 @@ class Document:
         entity = self.entities[entity_index]
         for index, token in enumerate(self.tokens):
             for feature in token:
-                yield self.feature_to_global_index(feature)
+                if self.embeding_func:
+                    yield feature.value
+                else:
+                    yield self.feature_to_global_index(feature)
             if entity.start <= index < entity.end:
                 yield self.vocab_ent[entity.label]
             else:
@@ -395,7 +394,13 @@ class Document:
 
     @classmethod
     def from_spacy_document(
-        cls, doc: "SpacyDoc", vocab: Vocabulary = None, vocab_ent: Vocabulary = None
+        cls,
+        doc: "SpacyDoc",
+        vocab: Vocabulary = None,
+        vocab_ent: Vocabulary = None,
+        *,
+        embeding_func: Callable = None,
+        emb_size: int = 1,
     ) -> "Document":
         """Create document from spacy document.
         If vocab is None, it will be created from the spacy model.
@@ -406,13 +411,22 @@ class Document:
 
         tokens = []
         for token in doc:
-            tokens.append(
-                [
-                    Feature(0, pos_tags[token.pos_]),
-                    Feature(1, dep_tags[token.dep_]),
-                    Feature(2, vocab[token.text]),
-                ]
-            )
+            if embeding_func is None:
+                tokens.append(
+                    [
+                        Feature(0, vocab[token.pos_]),
+                        Feature(1, vocab[token.dep_]),
+                        Feature(2, vocab[token.text]),
+                    ]
+                )
+            else:
+                tokens.append(
+                    [
+                        Feature(0, embeding_func(token.pos_)),
+                        Feature(1, embeding_func(token.dep_)),
+                        Feature(2, embeding_func(token.text)),
+                    ]
+                )
 
         if vocab_ent is None:
             vocab_ent = Vocabulary(
@@ -423,7 +437,14 @@ class Document:
         entities = []
         for ent in doc.ents:
             entities.append(Entity(ent.label_, ent.text, ent.start, ent.end))
-        return cls(tokens, entities, vocab, vocab_ent)
+        return cls(
+            tokens,
+            entities,
+            vocab,
+            vocab_ent,
+            embeding_func=embeding_func,
+            emb_size=emb_size,
+        )
 
     @staticmethod
     @lru_cache(maxsize=16)
@@ -488,25 +509,44 @@ class Document:
         Dim = (3 features + 1 label) * (length of tokens +  1 meta token + 2 for [CLS] and [SEP])
         If exclude_label is True, it will not include the label in the array
         then dim = 3 * (length of tokens + 3)
+
+        size + 2 ([CLS] and [SEP]) are embedding
         """
         size: int = len(self.tokens)
         if exclude_label:
-            dim = 3 * (size + 3)
+            dim = 3 * ((size + 2) * self.emb_size) + 3
         else:
-            dim = (3 + 1) * (size + 3)
+            dim = 3 * ((size + 2) * self.emb_size) + 3 + (size + 3)
 
-        tokens: np.ndarray = np.zeros(dim, dtype=np.int32)
+        tokens: np.ndarray = np.zeros(dim, dtype=np.float32)
         index_token = 0
+        # Meta data has not embedding
+        limit_meta = 3 if exclude_label else 4
+        num_entities = 0
         for index, item in enumerate(self):
             is_label = index % 4 == 3
             if entity_label is not None and is_label:
                 if item == self.vocab_ent[entity_label]:
-                    tokens[index_token] = 1
+                    tokens[index_token * self.emb_size] = 1
                 else:
-                    tokens[index_token] = 0
+                    tokens[index_token * self.emb_size] = 0
                 index_token += 1
             elif not (is_label and exclude_label):
-                tokens[index_token] = item
+                start_slice = (
+                    (index_token - limit_meta - num_entities) * self.emb_size
+                    + limit_meta
+                    + num_entities
+                )
+                if hasattr(item, "__iter__"):
+                    # Minus number of entities
+                    end_slice = start_slice + self.emb_size
+                    tokens[start_slice:end_slice] = item[:]
+                elif index >= limit_meta:
+                    # Number of entities
+                    tokens[start_slice] = item
+                    num_entities += 1
+                else:
+                    tokens[index_token] = item
                 index_token += 1
         return tokens
 
@@ -561,27 +601,37 @@ class Document:
     @cached_property
     def unk_id(self):
         """Get id of unknown token."""
-        return self.vocab.unk_id + len(pos_tags) + len(dep_tags)
+        if self.embeding_func is None:
+            return self.vocab.unk_id + len(pos_tags) + len(dep_tags)
+        return self.embeding_func("[UNK]")
 
     @cached_property
     def mask_id(self):
         """Get mask id."""
-        return self.vocab.mask_id + len(pos_tags) + len(dep_tags)
+        if self.embeding_func is None:
+            return self.vocab.mask_id + len(pos_tags) + len(dep_tags)
+        return self.embeding_func("[MASK]")
 
     @cached_property
     def sep_id(self):
         """Get sep id."""
-        return self.vocab.sep_id + len(pos_tags) + len(dep_tags)
+        if self.embeding_func is None:
+            return self.vocab.sep_id + len(pos_tags) + len(dep_tags)
+        return self.embeding_func("[SEP]")
 
     @cached_property
     def cls_id(self):
         """Get cls id."""
-        return self.vocab.cls_id + len(pos_tags) + len(dep_tags)
+        if self.embeding_func is None:
+            return self.vocab.cls_id + len(pos_tags) + len(dep_tags)
+        return self.embeding_func("[CLS]")
 
     @cached_property
     def pad_id(self):
         """Get pad id."""
-        return self.vocab.pad_id + len(pos_tags) + len(dep_tags)
+        if self.embeding_func is None:
+            return self.vocab.pad_id + len(pos_tags) + len(dep_tags)
+        return self.embeding_func("[PAD]")
 
     @cached_property
     def vocab_size(self):
@@ -626,6 +676,8 @@ class Corpus:
     documents: List[Document]
     entities: Dict[str, List[int]] = field(init=False)
     vocab_ent: Vocabulary = None
+    embeding_func: Callable = None
+    emb_size: int = 1
 
     def __post_init__(self):
         """Post init."""
@@ -696,14 +748,9 @@ class Corpus:
     ):
         """Create corpus from spacy docs."""
         return cls(
-            [
-                Document.from_spacy_document(doc, **kwargs)
-                for doc in tqdm(
-                    spacy_docs,
-                    total=total_samples,
-                )
-            ],
+            [Document.from_spacy_document(doc, **kwargs) for doc in spacy_docs],
             vocab_ent=kwargs.get("vocab_ent"),
+            emb_size=kwargs.get("emb_size"),
         )
 
     def to_text_array(
@@ -711,10 +758,12 @@ class Corpus:
         entity_label: str = None,
         exclude_label=False,
         max_size_doc: int = 172,
+        encoding="utf-8",
+        *,
         input_filename="input.txt",
         target_filename="target.txt",
         metadata_filename="metadata.txt",
-        encoding="utf-8",
+        confidence_docs=100,
     ):
         """Create files with text from documents.
         Create a file to inputs, targets and other file to metadata.
@@ -724,32 +773,27 @@ class Corpus:
         ) as target_file, open(
             metadata_filename, "w", encoding=encoding
         ) as metadata_file:
-            for _, document in enumerate(self.documents):
-
+            for index_doc, document in enumerate(self.documents):
                 if len(document.entities) == 0:
                     continue
 
-                document_array = document.to_array(entity_label, exclude_label).reshape(
-                    -1, 4
-                )
-                max_size = min(max_size_doc, document_array.shape[0])
+                document_array = document.to_array(entity_label, exclude_label)
+                max_size = int(min(max_size_doc, document_array[0] + 2))
+                emb_size = self.emb_size * 3
 
-                input_data = np.zeros((max_size_doc, 3), dtype=np.float32)
-                target = np.zeros((max_size_doc, 1), dtype=np.int32)
-                meta = np.zeros((4), dtype=np.float32)
+                input_data = np.zeros(max_size * emb_size, dtype=np.float32)
+                target = np.zeros(max_size, dtype=np.int32)
+                meta = np.zeros(4, dtype=np.int32)
+                meta[:4] = document_array[:4]
+                # Confidence in labeled document
+                meta[2] = confidence_docs
+                meta[3] = index_doc
+                document_array = document_array[4:].reshape(-1, emb_size + 1)
+                input_data[:] = document_array[:max_size, :emb_size].reshape(-1)
+                target[:] = document_array[:max_size, emb_size:].reshape(-1)
 
-                meta[:] = document_array[0]
-                input_data[: max_size - 1] = document_array[1:max_size, :3]
-                target[: max_size - 1] = document_array[1:max_size, 3:]
-
-                for line in input_data:
-                    input_file.write(",".join([str(x) for x in line]))
-                    input_file.write(" ")
-
-                for line in target:
-                    target_file.write(str(line[0]))
-                    target_file.write(" ")
-
+                input_file.write(",".join([str(x) for x in input_data]))
+                target_file.write(",".join([str(x) for x in target]))
                 metadata_file.write(",".join([str(x) for x in meta]))
 
                 input_file.write("\n")
@@ -764,16 +808,13 @@ class GANER:
     If chromosome's values is positive, then it includes the Entity.
     """
 
-    data: np.ndarray
-    # target: np.ndarray
-    # meta_data: np.ndarray
     map_inv_entity: Dict[int, str]
     n_population: int
     max_len: int
     mask_id: int
     unknown_id: int
-    ml_model: pl.Trainer
     n_top: int
+    candidate_words: np.ndarray
     population: np.ndarray = None
     population_fitness: np.ndarray = None
     random_state: int = None
@@ -781,45 +822,94 @@ class GANER:
     select: Callable = None
     fitness: Callable = None
     num_threads: int = None
+    num_features: int = 1
+    embedding_size: int = 1
 
-    def create_gen(self, cromosome: np.ndarray):
+    def __post_init__(self):
+        """Initialize random seed."""
+        np.random.seed(self.random_state)
+
+    def create_gen(
+        self,
+        individual: np.ndarray,
+        position: int,
+        candidate_words: np.ndarray,
+        size_candidate: int,
+        is_entity: float = 1.0,
+        embedding_size: int = 1,
+    ):
         """Create gen.
-        Run ml model with cromosome and return gen.
-        Select gen with ramdom with probability distribution.
-        is_entity: True if gen is entity. If it's False the value gen is negative.
+        Select random word from candidate words.
+
+        Args:
+        -----
+            individual (np.ndarray): Individual.
+            position: (int): Position of gen.
+            candidate_words (np.ndarray): Candidate words.
+            size_candidate (int): Size of candidate words.
+            is_entity (float): Value to indicate if is entity.
+
+        Returns:
+        --------
+            individual (np.ndarray): Indivivual with new gen.
         """
-        import torch
-        from torch.utils.data import DataLoader
+        start_position = position * (embedding_size + 2) + 3
+        random_index = np.random.randint(0, size_candidate)
+        individual[start_position] = is_entity
+        individual[
+            start_position + 1 : start_position + embedding_size + 2
+        ] = candidate_words[random_index]
+        return individual
 
-        batch_size = 32
-        prob_list = self.ml_model.predict(
-            self.ml_model.model,
-            DataLoader(
-                torch.from_numpy(cromosome.astype(np.int)), batch_size=batch_size
-            ),
-        )
-        gen_arr = np.empty(cromosome.shape[0], dtype=np.int)
+    def create_genes(
+        self,
+        individuals: np.ndarray,
+        positions: np.ndarray,
+        num_genes: int,
+        candidate_words: np.ndarray,
+        is_entities: np.ndarray,
+        embedding_size=1,
+    ):
+        """Create genes.
 
-        index = 0
-        for prob_bacth in prob_list:
-            for prob in prob_bacth:
-                top10 = prob.topk(self.n_top).indices
-                gen_arr[index] = np.random.choice(top10.numpy(), 1)
-                index += 1
+        Args:
+        -----
+            individuals (np.ndarray): Individual.
+            positions: (np.ndarray): Position of gen.
+            num_genes (int): Number of genes to be created.
+            candidate_words (np.ndarray): Candidate words.
 
-        return gen_arr
+        Returns:
+        --------
+            individuals (np.ndarray): Individuals with new genes.
+        """
+        size_candidate = candidate_words.shape[0]
+        for i in range(num_genes):
+            self.create_gen(
+                individuals[i],
+                positions[i],
+                candidate_words,
+                size_candidate,
+                is_entity=is_entities[i],
+                embedding_size=embedding_size,
+            )
+        return individuals
 
     def init_population(
         self,
+        input_data,
+        target,
+        meta,
         population: np.ndarray,
         population_fitness: np.ndarray,
         base_population: np.ndarray = None,
+        embedding_size: int = 1,
     ) -> Tuple[np.ndarray, np.ndarray]:
         """Initialize population.
         First token is size of rule.
-        Second token is its group.
+        Second token is its fitness value.
         Third token is to indicate entity type.
-        Fourth token is mask.
+        Next token are segments of genes.
         """
         # Copy base population
         if base_population is not None:
@@ -828,33 +918,45 @@ class GANER:
             population[:pop_num_indiv, :pop_num_features] = base_population[
                 :pop_num_indiv, :pop_num_features
             ]
-        # Add mask to population without gene
-        filter_add_mask = np.where(population[:, 3] == 0, True, False)
-        if filter_add_mask.sum() > 0:
+        # It added a mask to population without gene
+        # 3 indicate entity type, if 0 then the first chromosome is empty
+        filter_add_mask: np.ndarray = np.where(population[:, 3] == 0, True, False)
+        num_empty_genes = filter_add_mask.sum()
+        if num_empty_genes > 0:
+            # Select random entity type
             entity_types = np.random.choice(
                 range(1, 4), size=population.shape[0], replace=True
             )
-            population[filter_add_mask, 3] = self.mask_id
-            num_gen = 1
-            population[filter_add_mask, 0] = num_gen
-            population[filter_add_mask, 1] = -100
+            population[filter_add_mask, 0] = 1
+            population[filter_add_mask, 1] = 0
             population[filter_add_mask, 2] = entity_types[filter_add_mask]
+            population[filter_add_mask] = self.create_genes(
+                population[filter_add_mask],
+                np.zeros(num_empty_genes, dtype=np.int32),
+                num_empty_genes,
+                self.candidate_words,
+                is_entities=entity_types[filter_add_mask],
+                embedding_size=embedding_size,
+            )
 
-        # Create genes to first feature is mask
-        filter_create_gene = np.where(
-            population[:, 3] == self.mask_id, True, False
-        ).astype(int)
-        population[filter_create_gene, 3] = self.create_gen(
-            population[filter_create_gene, 3:4]
-        )
         # Calculate fitness
-        population_fitness[:] = self._fitness(population)[:]
+        population_fitness[:] = self._fitness(
+            input_data,
+            target,
+            meta,
+            population,
+            num_features=3,
+            embedding_size=embedding_size,
+        )[:]
         return population_fitness
 
     def mutate(
-        self, individual: np.ndarray, individual1: np.ndarray, individual2: np.ndarray
+        self,
+        individual: np.ndarray,
+        individual1: np.ndarray,
+        individual2: np.ndarray,
+        entity_island: int = None,
     ) -> np.ndarray:
-
         """Mutate individual.
         Select random if add, remove or change a gen.
         If size of individual is more than max_len, remove last feature.
@@ -865,56 +967,99 @@ class GANER:
         try:
             # TODO Model to select operation given it improves performance.
             size_individual: int = int(individual[0])
-            # 0 = add, 1 = remove, 2 = change 3 = change first, 4 = change last 5 = remove first, 6 = remove last
+            # 0 = add, 1 = remove, 2 = change 3 = change first
+            embedding_size: int = self.embedding_size + 2
+            max_features = (self.max_len - 3) // embedding_size
             operation = np.random.randint(0, 3)
             index_feature = 0
+
+            if individual1[3 + (size_individual - 1) * embedding_size + 2] == 0:
+                pass
+            # Validate correct operation
             if size_individual == 1 and operation == 1:
                 operation = 0
-                index_feature = size_individual + 3
+                index_feature = size_individual
             if size_individual == 1 and operation == 2:
-                index_feature = 3
-            elif operation == 0 and size_individual + 3 >= self.max_len:
+                index_feature = 0
+            elif operation == 0 and size_individual >= max_features:
                 operation = 1
-                index_feature = self.max_len - 1
-
+                index_feature = max_features - 1
+            # Update size of individual for add
             if operation == 0:
                 size_individual += 1
 
+            # Select random feature
             if not index_feature:
-                index_feature = np.random.randint(3, 3 + size_individual)
+                index_feature = np.random.randint(size_individual)
 
+            if (
+                individual1[0] == 2
+                and individual1[3 + (int(individual[0]) - 1) * embedding_size + 2] == 0
+            ):
+                pass
             try:
                 if operation == 0:
                     individual1[0] = size_individual
                     individual2[0] = size_individual
-
-                    for index in range(3 + size_individual - 1, index_feature, -1):
-                        next_val = individual[index - 1]
-                        individual1[index] = next_val
-                        individual2[index] = next_val
+                    # TODO Test to add a new feature
+                    for index in range(size_individual - 1, index_feature, -1):
+                        start_index = index * embedding_size + 3
+                        end_index = start_index + embedding_size
+                        next_start_index = (index - 1) * embedding_size + 3
+                        next_end_index = next_start_index + embedding_size
+                        next_val = individual[next_start_index:next_end_index]
+                        individual1[start_index:end_index] = next_val.copy()
+                        individual2[start_index:end_index] = next_val.copy()
 
                 elif operation == 1:
                     size_individual -= 1
                     individual1[0] = size_individual
                     individual2[0] = size_individual
-                    for index in range(index_feature, 3 + size_individual):
-                        next_val = individual[index + 1]
-                        individual1[index] = next_val
-                        individual2[index] = next_val
+                    for index in range(
+                        index_feature,
+                        size_individual,
+                    ):
+                        start_index = index * embedding_size + 3
+                        end_index = start_index + embedding_size
+                        next_start_index = (index + 1) * embedding_size + 3
+                        next_end_index = next_start_index + embedding_size
+                        next_val = individual[next_start_index:next_end_index]
+                        individual1[start_index:end_index] = next_val.copy()
+                        individual2[start_index:end_index] = next_val.copy()
 
-                    individual1[3 + size_individual] = 0
-                    individual2[3 + size_individual] = 0
+                    individual1[3 + size_individual * embedding_size :] = 0
+                    individual2[3 + size_individual * embedding_size :] = 0
             except IndexError:
                 raise
 
             if operation in [0, 2]:
-                new_size: int = int(individual1[0]) + 3
-                individual1[index_feature] = self.mask_id
-                gen = self.create_gen(np.abs(individual1[3:new_size]).reshape(1, -1))
-                individual1[index_feature] = gen
-                individual2[index_feature] = -gen
+                # new_size: int = int(individual1[0])
+                # individual1[0] = new_size
+                # individual2[0] = new_size
+                # TODO Create function to change a segment
+                self.create_gen(
+                    individual1,
+                    index_feature,
+                    self.candidate_words,
+                    self.candidate_words.shape[0],
+                    is_entity=entity_island or individual1[2],
+                    embedding_size=self.embedding_size,
+                )
+                # Update individual2 with new gene and change the first gene's segment to 0 (not entity)
+                start_index = index_feature * embedding_size + 3
+                end_index = start_index + embedding_size
+                individual2[start_index:end_index] = individual1[
+                    start_index:end_index
+                ].copy()
+                individual2[start_index] = 0
         except IndexError as e:
             raise
+
+        if individual1[3 + (int(individual1[0]) - 1) * embedding_size + 2] == 0:
+            pass
+
+        if individual2[3 + (int(individual2[0]) - 1) * embedding_size + 2] == 0:
+            pass
         return individual1, individual2
 
     def crossover(
@@ -944,16 +1089,19 @@ class GANER:
         individual2_new[0] = (individual2_new[3:] != 0).sum()
         return individual1_new, individual2_new
 
-    def _fitness(self, population: np.ndarray) -> np.ndarray:
+    def _fitness(
+        self,
+        input_data,
+        target,
+        meta,
+        population: np.ndarray,
+        num_features: int,
+        embedding_size: int,
+    ) -> np.ndarray:
         """Calculate fitness of individual."""
         return self.fitness(
-            population,
-            self.data["ALL"]["input"],
-            self.data["ALL"]["target"][0],
-            self.data["ALL"]["meta"],
-            self.unknown_id,
-            self.num_threads,
-        ).base
+            input_data, target, meta, population, num_features, embedding_size
+        )
 
     def train_step(
         self,
@@ -962,6 +1110,14 @@ class GANER:
         offspring_population: np.ndarray,
         offspring_fitness: np.ndarray,
         n_population: int,
+        *,
+        docs: np.ndarray,
+        target: np.ndarray,
+        meta: np.ndarray,
+        num_features: int = 3,
+        embedding_size: int = 1,
+        island_number: int | None = None,
+        entity_island: int | None = None,
     ):
         """Train step model.
         max_iter: maximum number of iterations.
@@ -972,7 +1128,14 @@ class GANER:
             individual_selected = parent_population[index_population]
             individual1 = individual_selected.copy()
             individual2 = individual_selected.copy()
-            self.mutate(individual_selected, individual1, individual2)
+            if individual1[0] >= 2 and individual1[39] == 0:
+                raise ValueError("Individual 1 is not valid")
+            self.mutate(
+                individual_selected,
+                individual1,
+                individual2,
+                entity_island=entity_island,
+            )
 
             offspring_population[index_population * 2] = individual1
             offspring_population[index_population * 2 + 1] = individual2
@@ -980,8 +1143,30 @@ class GANER:
             index_population += 1
 
         # Calculate fitness of offspring
-        offspring_fitness[:] = self._fitness(offspring_population)[:]
-        population_fitness[:] = self._fitness(parent_population)[:]
+        offspring_fitness[:] = self._fitness(
+            docs,
+            target=target,
+            meta=meta,
+            population=offspring_population,
+            num_features=num_features,
+            embedding_size=embedding_size,
+        )[:]
+        population_fitness[:] = self._fitness(
+            docs,
+            target=target,
+            meta=meta,
+            population=parent_population,
+            num_features=num_features,
+            embedding_size=embedding_size,
+        )[:]
+
+        for p in parent_population:
+            if p[0] >= 2 and p[39] == 0:
+                raise ValueError("Individual is not valid")
+
+        for p in offspring_population:
+            if p[0] >= 2 and p[39] == 0:
+                raise ValueError("Individual is not valid")
 
         self.select(
             parent_population,
@@ -993,28 +1178,44 @@ class GANER:
             num_threads=self.num_threads,
         )
 
+        for p in parent_population:
+            if p[0] >= 2 and p[39] == 0:
+                raise ValueError("Individual is not valid")
+
         return parent_population
 
     def train(
         self,
+        input_data: np.ndarray,
+        target: np.ndarray,
+        meta: np.ndarray,
         max_iter: int,
         tol=10,
         *,
         base_population=None,
         num_islands=1,
         num_threads=1,
+        save_path=None,
+        sufix="",
     ):
         """Train step model.
         max_iter: maximum number of iterations.
         """
         self.num_threads = num_threads
-        np.random.seed(self.random_state)
 
         parent_population = np.zeros(
             (self.n_population, self.max_len), dtype=np.float32
         )
         population_fitness = np.zeros((self.n_population,), dtype=np.float32)
-        self.init_population(parent_population, population_fitness, base_population)
+        self.init_population(
+            input_data,
+            target,
+            meta,
+            parent_population,
+            population_fitness,
+            base_population,
+            self.embedding_size,
+        )
         # Variables to control the convergence
         self.population = np.zeros((self.n_population, self.max_len), dtype=np.float32)
         n_not_improve = 0
@@ -1025,11 +1226,24 @@ class GANER:
             (self.n_population * 2, self.max_len), dtype=np.float32
         )
         offspring_fitness = np.zeros((self.n_population * 2,), dtype=np.float32)
-
+        # TODO Number of islands have to be multiple of number entities
+        index_docs_arr = np.zeros(
+            (num_islands, int(target.shape[0] * 0.6)), dtype=np.int32
+        )
+        for i in range(num_islands):
+            index_docs_arr[i] = np.random.choice(
+                target.shape[0], size=int(target.shape[0] * 0.6), replace=False
+            )
         for i in pbar:
-
             step_range = self.n_population // num_islands
+            # TODO Parralelize for each island
+            # TODO ADD entity by island
+            entity_island_id = 0
             for index_island in range(0, self.n_population, step_range):
+                # Each island has a different target to documents
+                entity_island_id = (entity_island_id % num_islands) + 1
+                # index_docs = index_docs_arr[index_island // step_range]
+                index_docs = np.where((target == entity_island_id).any(axis=1))[0]
                 self.train_step(
                     parent_population[index_island : index_island + step_range],
                     population_fitness[index_island : index_island + step_range],
@@ -1041,30 +1255,50 @@ class GANER:
                     ],
                     n_population=min(index_island + step_range, self.n_population)
                     - index_island,
+                    docs=input_data[index_docs],
+                    target=target[index_docs],
+                    meta=meta[index_docs],
+                    num_features=self.num_features,
+                    embedding_size=self.embedding_size,
+                    entity_island=entity_island_id,
                 )
 
             # Migration
-            if num_islands > 1 and i % 10 == 0:
+            if num_islands > 1 and i % 10 == 0 and i > 0:
+                # Select random individuals from each island to migrate
+                migration_indexes = np.random.randint(0, step_range, size=num_islands)
+                migration_individuals = np.zeros(
+                    (num_islands, self.max_len), dtype=np.float32
+                )
+                migration_fitness = np.zeros((num_islands,), dtype=np.float32)
+
                 for index_island in range(num_islands):
-                    index_migration = (
-                        np.random.randint(0, step_range) + index_island * step_range
-                    )
-                    index_accept = (
-                        np.random.randint(0, step_range)
-                        + (index_island + 1) * step_range
-                    )
-                    if index_accept >= self.n_population:
-                        index_accept = index_accept - self.n_population
-                    if (
-                        population_fitness[index_migration]
-                        > population_fitness[index_accept]
-                    ):
-                        parent_population[index_accept, :] = parent_population[
-                            index_migration
-                        ].copy()
-                        population_fitness[index_accept] = population_fitness[
-                            index_migration
-                        ].copy()
+                    migration_index = (
+                        migration_indexes[index_island] + index_island * step_range
+                    ).item()
+                    migration_individuals[index_island] = parent_population[
+                        migration_index
+                    ].copy()
+                    migration_fitness[index_island] = population_fitness[
+                        migration_index
+                    ].copy()
+
+                # Select random individuals from each island to accept migration
+                random_islands = np.random.choice(
+                    num_islands, size=num_islands, replace=False
+                )
+                for index_island in range(num_islands):
+                    next_island = random_islands[(index_island + 1) % num_islands]
+                    accepted_index = (
+                        migration_indexes[next_island] + next_island * step_range
+                    ).item()
+
+                    parent_population[accepted_index, :] = migration_individuals[
+                        random_islands[index_island]
+                    ].copy()
+                    population_fitness[accepted_index] = migration_fitness[
+                        random_islands[index_island]
+                    ].copy()
 
             mean_fitness = population_fitness.mean()
             max_curr_fitness = population_fitness.max()
@@ -1074,30 +1308,42 @@ class GANER:
                 f"It:{i:02d}, Fitness:{mean_fitness:.4f}, Best Fitness:{max_curr_fitness:.4f}"
             )
             if (mean_fitness) > (mean_best_fitness):
-                best_fitness = mean_fitness
                 mean_best_fitness = mean_fitness
                 self.population = parent_population.copy()
                 n_not_improve = 0
-                self.population[:, 1] = -100
-                self.save()
+                self.population[:, 1] = 0
+                self.save(input_data, target, meta, save_path, sufix)
             else:
                 n_not_improve += 1
                 if n_not_improve > tol:
                     break
 
-    def save(self):
-        """Remove duplicates from population and save to file."""
+    def save(
+        self, docs, target: np.ndarray, meta: np.ndarray, save_path=None, sufix=""
+    ):
+        """Save model.
+        Remove duplicates from population and save to file.
+        """
         self.population = np.unique(self.population, axis=0)
         # remove if all are less than 0
         self.population = self.population[self.population[:, 0] > 0]
-        self.population_fitness = self._fitness(self.population)
+        self.population_fitness = self._fitness(
+            docs, target, meta, self.population, self.num_features, self.embedding_size
+        )
+
+        theshold = 0.5
+        fitness_filter = self.population_fitness > theshold
+        # print(f"Saving {fitness_filter.sum()} individuals")
+
+        if save_path is None:
+            save_path = "."
+
         np.save(
-            f"best_population.npy",
-            self.population[self.population_fitness > 0],
+            f"{save_path}/best_population{sufix}.npy", self.population[fitness_filter]
         )
         np.save(
-            f"best_fitness.npy",
-            self.population_fitness[self.population_fitness > 0],
+            f"{save_path}/best_fitness{sufix}.npy",
+            self.population_fitness[fitness_filter],
         )
 
     def predict(self, data: np.ndarray):
