@@ -9,3 +9,16 @@ Weak**.ipynb
 data/rules
 glove-*.gz
 build
+# exclude input text as input_new_1.txt or input_test.text
+input*.txt
+# exclude metadata as metadata_new_1.txt or metadata_test.text
+metadata*.txt
+# target files as target.txt target_new_1.txt or target_test.text
+target*.txt
+# Exclude compile files mpi
+ga_ner/utils/mpi/evo
+evo
+# Exclude compile files mp
+evomp
+# Exclude compile cython files
+evolution_rules.*.so

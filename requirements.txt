@@ -1,6 +1,7 @@
 Cython==0.29.32
-spacy==3.3.0
-spacy-transformers==1.1.5
+spacy==3.5.0
+transformers==4.25.1
+spacy-transformers==1.2.1
 numba==0.55.1
 torchtext==0.13.0
 pytorch-lightning==1.6.4
@@ -15,5 +16,7 @@ black==22.3.0
 ipywidgets==7.7.1
 tqdm==4.64.0
 tensorboard==2.9.1
+pandas==1.5.3
+seaborn==0.12.2
 # Test
 pytest==7.1.2

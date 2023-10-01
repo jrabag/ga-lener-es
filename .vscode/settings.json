@@ -5,11 +5,12 @@
     "editor.wordWrapColumn": 80,
     "editor.wrappingIndent": "same",
     "latex-workshop.debug.showUpdateMessage": false,
+    "latex-workshop.latex.build.forceRecipeUsage":false,
     "telemetry.telemetryLevel": false,
     "telemetry.enableTelemetry": false,
     "python.linting.enabled": true,
     "python.linting.pylintEnabled": true,
-    "python.formatting.provider": "black",
+    "python.formatting.provider": "none",
     "editor.formatOnSave": true,
     "files.associations": {
         "*.tcc": "cpp",
@@ -88,4 +89,11 @@
         "typeinfo": "cpp",
         "semaphore": "cpp"
     },
+    "[python]": {
+        "editor.defaultFormatter": "ms-python.black-formatter"
+    },
+    "github.copilot.notebook": {
+        "iterativeFixing": true,
+        "iterativeImproving": true
+    }
 }

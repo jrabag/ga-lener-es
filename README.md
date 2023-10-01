@@ -23,3 +23,9 @@ Use UNK token for OOV.
 ```bash
 python setup.py build_ext --inplace
 ```
+
+Install es_dep_news_trf
+
+```bash
+spacy download es_dep_news_trf
+```

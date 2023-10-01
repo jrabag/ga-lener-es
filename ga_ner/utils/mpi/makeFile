@@ -1,0 +1,3 @@
+mpicxx -o evo evolutionary_operations.cpp 
+
+mpirun -np 2 evo
