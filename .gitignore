@@ -13,6 +13,7 @@ build
 input*.txt
 # exclude metadata as metadata_new_1.txt or metadata_test.text
 metadata*.txt
+meta.txt
 # target files as target.txt target_new_1.txt or target_test.text
 target*.txt
 # Exclude compile files mpi
@@ -22,3 +23,24 @@ evo
 evomp
 # Exclude compile cython files
 evolution_rules.*.so
+# Exclude compile LaTeX files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.pdf
+*.pdf_tex
+*.synctex.gz
+*.toc
+*.fls
+*.fdb_latexmk
+*.gz
+
+# Exclude spacy documents
+*.spacy
+
+# Exclude files in path data/cms/
+data/cms/*
+
+data/train/esp.train.candidate_words*

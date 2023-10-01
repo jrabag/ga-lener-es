@@ -236,7 +236,17 @@ Fitness \ref{fitness_eq} is calculated based on the document mean for the RlogF 
 
 \begin{equation}
   \label{RlogF_eq}
-  RlogF(r) = \frac{F_i}{N_i} {\log_2}({F_i})
+  f_i = \frac{F_i}{N_i} {\log_2}({F_i})
+\end{equation}
+
+\begin{equation}
+  \label{RlogF_eq}
+  RlogF(Ind) = \frac{F_i}{N_i} {\log_2}({F_i})
+\end{equation}
+
+\begin{equation}
+  \label{RlogF_eq2}
+  RlogF(i,\alpha,\beta) = \alpha\frac{F_i}{N_i} + \beta{\log_2}({F_i})
 \end{equation}
 
 \begin{equation}
@@ -250,6 +260,12 @@ and ${ N_i}$ is the number of spans extracted for the feature. The factor ${\log
 The share function \ref{shared_eq} is computed after the fitness function. Both parents and children are taken to measure the cosine distance between individuals, taking from 2 tokens to 10 tokens. \ref{shared_eq_ind} is calculated on each island to maintain diversity in its population.
 
 \begin{equation}
+  \label{cosine_distance}
+  d(a, b) = 1- \frac{a \cdot b}{\|a\| \|b\|}
+\end{equation}
+
+
+\begin{equation}
   \label{shared_eq}
   sh(d) = \left \{
   \begin{array}{l}
@@ -258,6 +274,24 @@ The share function \ref{shared_eq} is computed after the fitness function. Both 
   \end{array}
   \right \}
 \end{equation}
+
+
+$$
+  \text{fitness}(\text{ind}, \text{doc}) = \begin{cases}
+    -1.0                                                                                                                                                                                                 & \text{if } \text{retrive\_doc} = 0 \\
+    0.8 \times \frac{\text{intercep\_doc}}{\text{retrive\_doc}} + 0.1 \times \frac{\log_2(\text{individual\_size})}{\log_2(7)} + 0.1 \times \frac{\text{similarity\_accumulator}}{\text{total\_matches}} & \text{otherwise}
+  \end{cases}
+$$
+
+$$
+  \text{f}^{d_{t}}_{i}(\alpha,\beta) =
+  \alpha \text{ precision} + \beta \text{ seq}^{d_{t}}_{i}
+$$
+
+$$
+  \text{ seq}^{d_{t}}_{i} = \frac{\text{similarity\_accumulator}}{\text{total\_matches}} + \frac{\log_2(\text{individual\_size})}{\log_2(7)}
+$$
+
 
 \begin{equation}
   \label{shared_eq_ind}
