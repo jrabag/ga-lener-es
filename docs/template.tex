@@ -35,6 +35,8 @@
 \usepackage{array}
 \usepackage{hyperref}
 \usepackage{svg}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
 
 % correct bad hyphenation here
 \hyphenation{op-tical net-works semi-conduc-tor}
@@ -46,12 +48,12 @@
 % paper title
 % can use linebreaks \\ within to get better formatting as desired
 % Do not put math or special symbols in the title.
-\title{Rules to Named entity recognition using evolutionary algorithm}
+\title{Syntactic rules to Named entity recognition using multimodal evolutionary algorithm}
 
 % author names and affiliations
 % use a multiple column layout for up to three different
 % affiliations
-\author{\IEEEauthorblockN{Jorge Leonardo Raba\\}
+\author{\IEEEauthorblockN{Jorge Leonardo Raba González\\}
   \IEEEauthorblockA{Universidad Nacional Bogotá, Colombia \\
     Email: jrabag@unal.edu.co\\
   }
@@ -65,7 +67,9 @@
 % in the abstract
 \begin{abstract}
 
-  This paper describe a evolutionary algorithm to learn rules to named entity recognition (NER) using linguistic features for multiple categories. The rules extract patterns from contexts using a small corpus. The algorithm is trained with the CoNLL-2003 dataset and executed on several parallel architectures, such as distributed memory (Open MPI), shared memory (OpenMP) and hybrid (GPU) architectures. The results show that the algorithm is capable of learning rules for the recognition of named entities with high precision with a small sample size.
+  This article presents an evolutionary algorithm for learning syntactic rules for named entity recognition (NER) using linguistic features for multiple categories. The rules (individuals in the population) extract patterns to recognize entities and tokens adjacent to the entities of tagged sentences. The problem is approached as a multimodal problem, since it is necessary to learn multiple patterns to recognize an entity, so a sharing function and the island model are used, so it is possible to obtain multiple solutions in parallel. The algorithm was trained and evaluated with the CoNLL-2003 dataset using the Spanish dataset and runs on several parallel architectures such as distributed memory (Open MPI), shared memory (OpenMP) and hybrid architectures (Cuda) to evaluate the scalability of the algorithm.
+
+  To assign an entity span, the algorithm uses a voting system, where the rules that recognize the entity are selected and the entity with the most voted category is labeled. The results show that the algorithm is capable of learning rules for the recognition of named entities with moderate precision according to the amount of data used and the integer encoding used to represent the individuals.
 
 \end{abstract}
 
@@ -81,20 +85,32 @@
 
 % Mini paper with Background, Problem, Method, Results and Conclusions
 
-The named entity recognition (NER) is a sequence labeling problem where the goal is to assign a label to each word in a sentence. In order to improve the performance it often requires a large amount data \cite{ma-etal-2022-label}, which is not always available and it difficult to apply to new domains \cite{Huang2020FewShotNE}. To reduce manual effort, previous works resort to manual lexicons (Shang et al., 2018b; Peng et al.,2019) or heuristic rules provided by domain experts (Fries et al., 2017; Safranchik et al., 2020;Lison et al., 2020b) as weak supervision. However, it is challenging for experts to write complete and accurate rules or lexicons in emerging domains, which requires both a significant amount of manual effort and a deep understanding of the data.
+Named Entity Recognition (\textbf{NER}) is a sequence labeling problem, where the goal is to assign a tag to each word in a sentence. To improve performance many times a large amount of data is required \cite{ma-etal-2022-label}, which is not always available and difficult to apply to new domains \cite{Huang2020FewShotNE}, as experts are needed to perform the process, so generating new annotated data is expensive and time consuming\cite{Shang2018}. Other approaches help to reduce manual labeling time, however domain experts are needed to provided heuristic rules \cite{Fries2017} or domain dictionaries\cite{Shang2018,Safranchik2020,Lison2020} , so the challenge is write high-precision rules.
 
-In this work, the explored method can generate several high-precision rules for each entity, this method considers the theory proposed by Holland \cite{holland-1992-adaptation} about niche environment and speciation. The dynamics of speciation is determined by competition between niches through function sharing and migrations between islands, which causes niche formation and subdivision of the environment and population.
+In this work, the proposed method is able to learn syntactic rules based on Parts of Speech (\textbf{PoS}), Grammatical Dependencies (\textbf{Dep}) or text for NER using multimodal evolutionary algorithms with a small amount of labeled data. These rules identify the linguistic properties of the tokens adjacent to the entity, so the algorithm can generate rules for unknown words.
+
+The explored method can generate several rules of moderate precision for each entity considering the theory proposed by Holland \cite{holland-1992-adaptation} about niche environment and speciation dynamics. This dynamic is determined by competition between niches through sharing functions and migrations between islands, which causes the formation of subpopulations and the subdivision of the environment.
 
 The islands model promotes population speciation through the formation of subpopulations isolated from each other. The subpopulations are connected by a migration operator that allows the exchange of information between them\cite{holland-1992-adaptation}. The migration operator is used to maintain population diversity and prevent premature convergence and extinction of subpopulations.
 
-To simulate the resources in the island model, each island uses a different sentence dataset, where each island has an entity related dataset to encourage convergence of speciation around an entity. This niche approach allows individuals to take advantage of the current characteristics of the environment to quickly eliminate dominant versions of an entity, so rules that are dominant on the island of people might not perform very well on the island of organizations.
+To simulate the resources in the island model, each island uses a different sentence dataset, where each island has a feature-related dataset to encourage convergence of speciation around a feature. This niche approach allows individuals to take advantage of current features of the environment to quickly eliminate dominant versions of an entity, so dominant rules identifying the entity person (\textbf{PER}) may perform poorly in islands where the main entity of the documents is organization (\textbf{ORG}).
 
-To select the best rules for each generation, first calculate the fitness that is based on the RlogF \cite{seman_lex} of the rules, then calculate the shared fitness function that helps reduce competition between individuals with a similar goal and solution different to maintain a more diverse population \cite{goldber_mul}. and finally, it uses a pseudo order, where parents compete with their children in a round-robin tournament to select the best rules. The losers can compete with the children of the neighbors to select the best rules. The pseudo order is used to avoid premature convergence of subpopulations.
+To select the best rules for each generation, firstly the fitness of the rules is calculated based on the RlogF \cite{seman_lex} , then the shared fitness is calculated to reduce competition between individuals with a similar goal and a different solution, thus maintains a more diverse population \cite{goldber_mul}, finally a pseudo-order is applied, where parents compete with their children in a tournament, in order to select the rules with the best fit. The losers of a round can compete with the children of the neighbors. For the selection an elitist approach is used, so the pseudo ordering is allowed to select the individuals with the best fitness between the parents and their offspring, reducing the algorithmic complexity, and in some cases allowing individuals with low performance to be part of the group. the next generation
 
-In this work, the proposed method can learn the semantic and logical rules of NER using evolutionary algorithms using a small amount of labeled data. The method is trained using the CoNLL 2002 \cite{tjong-kim-sang-2002-introduction} data set. The method is implemented in several parallel architectures and the results show its scalability for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures. The results show that the method is capable of learning precision rules.
+The majority system is used to tag the span entity, where each rule emit a vote for the category of span entity according its precision obtained in the training phase. The span entity is tagged with the category that has the most votes.
 
-The paper is organized as follows. In section 2 the related work is presented. In section 3 the method is presented.
-In section 4 the expetimental setup are presented. In section 5 the results are presented. In section 6 the conclusions are presented.
+The method is trained on the CoNLL 2002 \cite{tjong-kim-sang-2002-introduction} dataset. The method is implemented in several parallel architectures and the results show its scalability for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures. The results show that the method is capable of learning rules of moderate precision.
+
+The major contributions of this work are:
+\begin{itemize}
+  \item The proposed method can learn syntactic rules for NER using a small amount of labeled data.
+  \item The proposed method is scalable for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures.
+  \item The patterns learned by the proposed method can be detect linguistic features around the entity.
+\end{itemize}
+
+The code of the proposed method and data is realease for future research\footnote{https://github.com/jrabag/ga\--lener\--es/}. The rest of the paper is organized as follows:
+In section 2 the related work. In section 3 the method is presented.
+In section 4 the expetimental setup. In section 5 the results are showed. In section 6 the conclusions.
 
 % no keywords
 
@@ -114,109 +130,124 @@ In section 4 the expetimental setup are presented. In section 5 the results are 
 
 \subsection{Linguistic features}
 
-The linguistic features used are Parts of speech (also known as POS) and dependency grammar (Dep). PoS and named entities are useful clues to sentence structure and meaning. Knowing whether a word is a noun or a verb tells us about likely neighboring words (nouns are preceded by determiners and adjectives, verbs by nouns)\cite{martin-2020-speech}
+The linguistic features used to generate rules are Parts of speech\footnote{https://universaldependencies.org/u/pos/} (also known as POS) and dependency grammar\footnote{https://universaldependencies.org/u/dep/} (Dep). PoS is useful clue to sentence structure and meaning. Knowing whether a word is a noun or a verb tells us about likely neighboring words (nouns are preceded by determiners and adjectives, verbs by nouns)\cite{martin-2020-speech}
 
-A dependency grammar described relations that hold among the words, this relations provide an approximation to the semantic relationship between predicates and their arguments\cite{martin-2020-speech}
+A dependency grammar described relations that hold among the words, this relations provide an approximation to the semantic relationship between predicates and their arguments\cite{martin-2020-speech}.
+
+% Image dependencies and PoS
+
 
 \subsection{Named entity recognition}
 
 The named entity term named entity can be referred to with a
-proper name: a person, a location, an organization, although it
-is commonly extended to include things that aren't entities per se\cite{martin-2020-speech}.
+proper name: a person, a location, an organization, although it is commonly extended to include things that aren't entities per se\cite{martin-2020-speech}, such as dates, times, and monetary values.
 
-The named entity recognition (NER) is a fundamental task in natural language processing (NLP) that  serves as an uptream compoment for more complex task \cite{ma-etal-2022-label}. The named entity recognition is the task of identifying and classifying the named entities in a text. The named entities are the words that refer to a person, organization, location, date, time, money, percentage, and so on.
+Named Entity Recognition (NER) is a fundamental task in Natural Language Processing (NLP) that serves as an upstream component for more complex tasks \cite{ma-etal-2022-label}, as it gives clues to the structure of the sentence and how the main words are related to each other. This task identifies words from unstructured text and classifies them into entities that commonly refer to a person (\textbf{PER}), organization (\textbf{ORG}), location (\textbf{LOC}), and other entities (\textbf{MISC}).
 
-In this task each word $x_i$ in an input word sequence, a
-label $y_i$, so that the output sequence Y has the same length as the input sequence X are called sequence labeling tasks
-The named entity recognition is a sequence labeling task. This sequence is the input of the named entity recognition\cite{martin-2020-speech}.
+The named entity recognition is a sequence labeling task\cite{martin-2020-speech} because each word $x_i$ in an input word sequence, a label $y_i$, so that the output sequence $Y$ has the same length as the input sequence $X$.
 
 
 \subsection{Evolutionary algorithms}
 
-Evolutionary algorithms are inspirated from the process of natural evolution. A given environment is filled with a population of individuals that strive for survival and reproduction. The fitness of these individuals is determined by the environment, and relates to how well they succeed in achieving their goals\cite{eiben-2015-speech}. Environment is Problem to solve, and the individuals are the solutions to the problem. The fitness function is the measure of the quality of the solution. The goal of the evolutionary algorithm is to find the best solution to the problem.
+Los algoritmos evolutivos (\textbf{GA}) están inspirados en el proceso de evolución natural. Un entorno determinado está lleno de una población de individuos que se esfuerzan por sobrevivir y reproducirse\cite{eiben-2015-speech}, donde cada individuo es una solución tentativa a un problema específico.
 
-Each individual is a dual entity: its phenotypic properties (outside) are
-represented at a genotypic level (inside). In other words, an individual’s genotype encodes its phenotype. Genes are the functional units of inheritance
-encoding phenotypic characteristics. Here it is important
-to distinguish genes and alleles. An allele is one of the possible values that
-a gene can have\cite{eiben-2015-speech}
+An individual is a dual entity: its phenotypic (external) properties are represented at the genotypic (internal) level. Genes are the functional units of heredity that encode phenotypic characteristics\cite{eiben-2015-speech}. The values that a gene can take are called alleles and the one whose value is initially assigned by the initiation method \textbf{initial population}
+
+To measure the quality of the solution, the fitness function (\textbf{evaluation}), is run on each individual in the population\cite{eiben-2015-speech}. This function assigns a solution to a real number, where generally the individuals with the best fitness are selected to reproduce.
+
+The new tentative solutions are generated through variation operators (\textbf{variation}) such as crossover and mutation and its fitness is computed. These procedures are repeated until a pre-defined termination criterion is satisfied, such as the quality of the desired solution, the maximum number of evaluations.A GA is well suited to apply parallelization because of its population based approach, where all solution candidates can be dealt with in parallel way\cite{Linder2020-Parallel}
+
+New tentative solutions (offspring) are generated through variation (\textbf{variation}) operators such as crossover and mutation, after their fitness is calculated. These procedures are repeated until a predefined completion criterion is satisfied, such as the desired solution quality, the maximum number of evaluations, etc. A GA is well suited to apply parallelization because of its population based approach, where all solution candidates can be dealt with in parallel\cite{Linder2020-Parallel}, because at least the offspring can be generated independently for each individual
 
 \subsection{Related work}
 
-Historically, two major approaches have been used for entity recognition, one based on rules, the other based on statistical models. Rule-based approaches required dictionaries, regular expressions, and semantic constraints. Statistical models for named entity recognition, on the other hand, require labeled data for training purposes, as well as a statistical model that learns probabilistic representation, with collection being one of the main challenges with this approach, as the data is not always they are available and it is difficult to apply them to new domains \cite{martin-2020-speech}.
+Historically, two major approaches have been used for entity recognition, one based on rules, the other based on statistical models\cite{martin-2020-speech,Safranchik2020}. Rule-based approaches required dictionaries, regular expressions, and semantic constraints\cite{Lison2020}. Statistical models for named entity recognition, on the other hand, require labeled data for training purposes, as well as a statistical model that learns probabilistic representation, with collection being one of the main challenges with this approach\cite{Fries2017,Lison2020,tallor}
 
-Due to the interdependence between the entities named in a piece of text, this has often been modeled as a sequence tagging task, which has proven to be an effective strategy. Early examples of this approach are hidden Markov models, maximum entropy and conditional random fields (CRFs) as is mentioned in \cite{martin-2020-speech}.
+In 2002, Thelen developed a weakly supervised bootstrap algorithm that automatically generates semantic lexicons from extraction pattern contexts\cite{seman_lex}. The latest approaches are based on using weak supervision to create rules, use dictionaries, or ontological databases to later train taggers. In 2017, the model proposed by Fries et al. \cite{Fries2017} uses a probabilistic model to unify the entities generated by the rules. In 2018 Shang et al. \cite{Shang2018} his model seeks to unite those that are part of the same entity to reduce the noise generated by dictionaries.
+In 2020 \cite{Safranchik2020,Lison2020} proposes the use of hidden Markov models, Safranchik et al. \cite{Safranchik2020} uses a Markov model that needs heuristic rules to generate the entities, while Lison et al. \cite{Lison2020} can make use of ontological databases. In 2021 Tallor et al. \cite{tallor} proposes a model that uses a small set of initial rules to generate a larger set of rules that are used to train a deep neural network.
 
-Thelen developed a weakly supervised bootstrapping algorithm  that automatically generates semantic lexicons from extraction
-pattern contexts\cite{seman_lex} in 2002. Tallor \cite{tallor} is a proposed a method to learn rules using a seed rules
-we propose to learn compound logical rules in 2017,
 
 \section{PROPOSED MODEL}
 
+The alleles of the individuals in the population are integers that represent the value of a linguistic features. The topology used in the island model is ring. First the initial population is generated, then the population is distributed on each of the islands. A mutation operator is randomly applied to each individual, then fitness is calculated for all individuals. In the selection stage, the shared fitness is calculated and the best individuals are selected by executing the pseudo-order algorithm.
+Migration is applied every 10 generations. Below are more details of each of the steps
 
 \subsection{Individual encoding}
 
-The genotype of individuals is represents using 10 double values.
-. Each individual seeks to identify the sequence of vector that match with of the linguistic features in the sentences. The individual is encoded as follows:
-\begin{itemize}
-  \item first token: is length of the rule. Thw minimum value is 1 and maximum values is 7.
-  \item  second token: is the island number that the individual belongs. The minimum value is 1 and maximum value is 8.
-  \item  third token: type of entity that the rule is related to. The minimum value is 1 and maximum value is 4.
-  \item  last tokens: are the tokens that the rule covers. When the rule is shorter than 7 tokens, the last tokens are filled with 0. The minimum value is 1 and maximum value is 2784.
-\end{itemize}
+El fenotipo esta compuesto por una secuencias de caracteriscas linguisticas, cuya longitud varia entre 1 a 7. Para identificar si la caracterisca hace parte del contexto o de una entidad, se agrega un signo negativo como prefijo, tal como se puede ver en la figura \ref{fig:fenotype}.
 
-(pending image length of entities)
+% Figure fenotype
+\begin{figure}[ht]
+  \centering
+  \includesvg[width=3cm]{img/feno_org.svg}
+  \caption{Phenotype to an individual that detects the organization of the entity. The pattern indicates that the first two words are part of the context and the third word is part of the entity.}
 
-The linguistic features that can have each chromosome are:
+  \label{fig:fenotype}
+\end{figure}
+
+
+% Figure genotype
+\begin{figure}[ht]
+  \centering
+  \includesvg[width=8cm]{img/geno_org.svg}
+  \caption{Genotype. The first position indicates that the length of the rule is 4, the second current fitness is 0.0, the third is the value of the entity, in this case 3 refers to ORG. The rest of the positions are the values of the linguistic features.}
+
+  \label{fig:genotype}
+\end{figure}
+
+The phenotype is decoded to the genotype which is represented using 10 double values. As can be seen in the figure \ref{fig:genotype}. Each individual seeks to identify the sequence of values that match the linguistic features of the sentences. The individual is encoding as follows:
+
 \begin{itemize}
-  \item Part of Speech (PoS\footnote{https://universaldependencies.org/u/pos/}). Values between 1 and 19.
-  \item Sintatic dependency (Dep\footnote{https://universaldependencies.org/u/dep/}) Values between 20 and 81.
-  \item Text. Values between 82 and 2784. The value 2781 is used to unknown words.
+  \item \textbf{First token} is the length of the rule. The minimum value is 1 and the maximum value is 7.
+  \item \textbf{Second token} is the current fitness of the individual.
+  \item \textbf{Third Token} type of entity that the rule is related to. The minimum value is 1 and the maximum value is 4.
+  \item \textbf{Last tokens} are the tokens covered by the rule. When the rule is shorter than 7 tiles, the last tiles are padded with 0. The minimum value is 1 and the maximum value is 2784.
 \end{itemize}
 
 \subsection{Island model}
 
-Each island as you can see in figure \ref{fig:island} is evaluated with documents that have at least 1 entity recognized by the island. In this way certain individuals may have a higher fitness than others according to island where fitness is evaluated. If the individual's entity is the same as the one recognized by the island that individuals take advantage.
+Implementation Hibryd islandxGlobal
+The islands model is implements with a Topology ring as you can see in figure \ref{fig:island}. Each island is evaluated with documents that have at least 1 entity recognized by the island. In this way certain individuals may have a higher fitness than others according to island where fitness is evaluated. If the individual's entity is the same as the one recognized by the island that individuals take advantage.
 
 \begin{figure}[ht]
-  \caption{Island model}
   \centering
-  \includegraphics[width=8cm]{img/island_ae.png}
+  \includesvg[width=8cm]{img/island_ae.svg}
+  \caption{Island model}
   \label{fig:island}
 \end{figure}
 
-A migration of individuals between populations is performed. The individuals that are most to the left are selected, which could be considered as those with the best fitness of the current population and are migrated to the destination population. The individual most to the left is selected that is of the same type as the individual that is to be migrated. The migrated individuals are replaced by individuals of the destination population. A migration between populations is performed every 10 generations.
+The island model is implemented with a ring topology as can be seen in the figure \ref{fig:island}. Each island is evaluated with documents that have at least 1 entity recognized by the island, in this way each island evaluates the performance of individuals differently. In this way, certain individuals may have a higher fitness than others depending on the island where the its fitness is evaluated. In this way, if the entity of the individual is the same as that which is mainly recognized by the island, these individuals take advantage.
 
 \subsection{Mutation}
 
-Three mutation operators are used:
+The only genetic operator used is the mutation, the options an individual can take randomly are the following:
+
 \begin{itemize}
-  \item  Gen mutation: The value of a gen is changed to a random value between 1 and 2784.
-  \item Gen mutation: Two individuals are created from a parent. A gen is selected randomly and this is replaced by a gen whose value is selected randomly. One individual has a positive value and the other has a negative value.
-  \item  Addition mutation: A new gen is created with a random value between 1 and 2784. The position of the new gen is randomly selected according to the size of the parent from which two individuals are created. One individual has a positive value and the other has a negative value.
-  \item Deletion mutation: An individual is created from a parent. A gen is selected randomly and this is deleted from the individual. The genes that are to the right of the deleted gen are shifted one position to the left.
+  \item \textbf{Allele change}: Two child are created from one parent. A gene is selected at random and replaced by an allele whose value is selected at random. One child has a positive value and the other has a negative value.
+  \item \textbf{Add a gene}: Two child are created with a random value. The position of the childs is randomly selected based on the size of the parent. One child has a positive value and the other has a negative value.
+  \item Delete a gene: A child is created from a parent. A gene is selected at random and extracted from the child. Genes to the right of the deleted gene are shifted one position to the left.
 \end{itemize}
-When a gen is created o modified, first select a linguistic feature and after select a value for the feature. For PoS the value is selected randomly between 1 and 19. For Dep the value is selected randomly between 20 and 81. For Text the value is selected randomly between 82 and 2784.
+When creating or modifying a gene, a linguistic feature is first selected, then a value for the feature is selected. For PoS, the value is between 1 and 19, for Dep, the value is between 20 and 81, for Text, the value is between 82 and 2784.
 
 
 \subsection{Fitness function}
 
-The fitness function is defined as an adaption of the
-RlogF method (\ref*{RlogF_eq})\cite{seman_lex}. The fitness \ref{fitness_eq} is calculate over average of documents that contains at least one entity.
+Fitness \ref{fitness_eq} is calculated based on the document mean for the RlogF metric (\ref*{RlogF_eq})\cite{seman_lex} on each of the islands. This calculation is made after performing the mutation operation on each individual.
 
 \begin{equation}
   \label{RlogF_eq}
-  F(r) = \frac{F_i}{N_i} {\log_2}({F_i})
+  RlogF(r) = \frac{F_i}{N_i} {\log_2}({F_i})
 \end{equation}
 
 \begin{equation}
   \label{fitness_eq}
-  fitness = \frac{1}{N} \sum_{i=1}^{N} F(r_i)
+  fitness(r) = \frac{1}{N} \sum_{i=1}^{N} RlogF(r_i)
 \end{equation}
 
-The RlogF metric is a weighted conditional probability, a pattern receives a high score if a high percentage of its extractions are category members\cite{seman_lex}. This method also considers accuracy and coverage, because $\frac{F_i}{N_i}$ represents the accuracy and ${\log_2}({F_i})$ represents the rule's ability to cover more spans \cite{tallor}
+The RlogF metric is a weighted conditional probability, where the pattern is scored high if a high percentage of its extractions are members of category\cite{seman_lex}, where ${F_i}$ is the number of intervals successfully extracted for the feature,
+and ${ N_i}$ is the number of spans extracted for the feature. The factor ${\log_2}({F_i})$ represents the ability of the rule to cover more spans \cite{tallor}.
 
-The sharing function \ref{shared_eq} use cosine distance between individuals taking from 2 token to 10 tokens. The individual fitness \ref{shared_eq_ind} is calculated in each island.
+The share function \ref{shared_eq} is computed after the fitness function. Both parents and children are taken to measure the cosine distance between individuals, taking from 2 tokens to 10 tokens. \ref{shared_eq_ind} is calculated on each island to maintain diversity in its population.
 
 \begin{equation}
   \label{shared_eq}
@@ -235,96 +266,251 @@ The sharing function \ref{shared_eq} use cosine distance between individuals tak
 
 \subsection{Selection}
 
-A pseudo sorting of the individuals is performed according to their fitness. The individuals with the best fitness are selected and the individuals with the worst fitness are eliminated. A tournament is held between the individuals to select the best. The tournament is held as follows: The parents and children compete with the neighbor on the right, In parent population the winner moves one place to the left, In offspring the winner moves one place to the right. In Figure \ref{fig:seudo_sort} P2 is the winner, then P1 is moved to zero position and P1 is moved to 1 position, C11 and C22 are winner then C11 is moved to position 1 and C22 kept position. To select the winner the i's parent position, then competes parent in postion i a child in position i * 2 and position i * 2 + 1. The winner stays with the position of the parent, In the figure \ref{fig:seudo_sort} C11 is winner between P2 and C21, then C11 is moved to position 0 the parent population, C11 is selected individual. The process is repeated until the population is completed.
+To select the individuals that will be used in the next generation, a pseudo ordering\ref{alg:pseudo_sort} was carried out as a tournament selection on each island, where parents compete with their children.
+
+The tournament is carried out as follows: in the first stage parents and children compete with the neighbor on the right, in the parent population the winner moves one place to the left, in the offspring the winner move one place to the right. In the figure \ref{fig:pseudo_sort} P2 is the winner, then P1 moves to position zero and P1 moves to position 1, C11 is the winners, then C11 moves to position 1. In the second stage, to select the winner of parent's position $i$, then a parent competes  with the an offspring in position $i * 2$ and position $i * 2 + 1$. The winner takes with the parent's position, so this will be part of the next generation. In the figure \ref{fig:pseudo_sort} C11 is the winner between P2 and C12, then C11 moves to position 0 of the parent population, C11 is the selected individual. The process is repeated until the population is complete.
 
 \begin{figure}[ht]
-  \caption{Pseudo sorting}
   \centering
-  \includegraphics[width=8cm]{img/pseudo_sort.png}
-  \label{fig:seudo_sort}
+  \subfloat[Stage 1]{
+    \includesvg[width=2.7cm]{img/sort_a.svg}
+    \label{fig:pseudo_sort_1}
+  }
+  \subfloat[Stage 2]{
+    \includesvg[width=2.7cm]{img/sort_b.svg}
+    \label{fig:pseudo_sort_2}
+  }
+  \subfloat[Stage 3]{
+    \includesvg[width=2.7cm]{img/sort_c.svg}
+    \label{fig:pseudo_sort_3}
+  }
+  \caption{Pseudo sorting with $i=0$. \ref{fig:pseudo_sort_1} P2 and C11 are the winners. (b) C11 is the winner between P2 and C12. (c) is the state of the population after the sorting for first iteration.}
+  \label{fig:pseudo_sort}
 \end{figure}
 
 
-\subsection{EXPERIMENTAL SETUP}
+% Pseudo Code of pseudo sorting
 
-\subsubsection{Settings}
+\begin{algorithm}[H]
+  \caption{Pseudo sorting}
+  \label{alg:pseudo_sort}
+  \begin{algorithmic}[1]
+    \State \textbf{Input:} Population $P$ and Offspring $C$
+    \State \textbf{Output:} Population $P$
+    \State $i \gets 0$
+    \While{$i < |P|-1$}
+    \State $P_i \gets$ Select $P_i$ and $P_{i+1}$
+    \State $C_{i*2+1} \gets$ Select $C_{i*2}$ and $C_{i*2+1}$
+    \State $P_i \gets$ Select $P_i$ and $C_{i*2}$ and $C_{i*2+1}$
+    \State $P_i \gets$ Select winner
+    \State $i \gets i + 1$
+    \EndWhile
+    \State \textbf{Return} $P$
+  \end{algorithmic}
+\end{algorithm}
 
+
+\subsection{Tagging}
+
+
+Majory votes to tagged a entity span. The entity type is the one that has the highest number of votes. If there is a tie, the entity type is selected randomly. The weight of each vote is the precision of the individual that generated the entity. Every  unmatched  token  will  be  tagged  as  non-entity
+
+The majority voting system is used to label a range of functions. The entity type is the one with the highest number of votes, where the confidence of each vote is determined by the accuracy of the rule obtained after training. If there is a tie, the entity type is randomly selected.
+
+The entity span that has been voted as an entity is assigned if the weighted sum of the votes is greater than the threshold. The threshold is the maximum between 0.5 and the sum of half the votes. If the sum of the votes is less than the threshold, the entity is not assigned.
+
+%Sample of matrix%
+
+% Threshold equation
+\begin{equation}
+  \label{threshold_eq}
+  threshold = max(\frac{1}{2} \sum_{i=0}^{N} v_i, 0.5)
+\end{equation}
+
+% Sample majority vote
+
+\section{EXPERIMENTAL SETUP}
+
+\subsection{Settings}
+
+% Description of datasets
 The datasets used in this paper is connll 2002\cite{tjong-kim-sang-2002-introduction}.The data represents news wire covering two languages: Spanish and Dutch. For the experiments only Spanish data is used. The data is divided into 3 sets: train, development (testa) and test (testb). The dataset is annotated by four entity types: persons (PER), organizations (ORG), locations (LOC), and miscellaneous names (MISC).
 
-The vocabulary used is built using train dataset. A special token is added to the vocabulary to represent unknown words.The vocabulary is built using the following steps:
+The vocabulary used is built using train dataset using the following steps:
 \begin{itemize}
+  \item Get linguistic features from the train dataset.
   \item The words are converted to lowercase.
   \item The words with frequency less than 10 are removed.
   \item The words are sorted by frequency.
   \item The words are converted to integers starting from 1.
+  \item Token special are added to the vocabulary such as \textit{[unk]},  \textit{[pad]}, \textit{[cls]} and \textit{[sep]}. The \textit{[unk]} token is used for words that are not in the vocabulary or low frequency. The \textit{[pad]} token is used to pad the sentences. The \textit{[cls]} token is used to indicate the beginning of the sentence. The \textit{[sep]} token is used to indicate the end of the sentence.
 \end{itemize}
 
+To obtain the linguistic features, the Spacy's Spanish model\footnote{https://spacy.io/models/es} was used, which implements a transformer model (dccuchile/bert\--base\-spanish\-www\--cased) for tokenization, POS labeling, and dependency analysis.
+
+% Description of parameters
 To train the model, the following parameters are used:
 \begin{itemize}
-  \item Population size: 1200
-  \item Number of generations: 1000
-  \item Number of islands: 8
-  \item Migration interval: 10 generations
-  \item 200 sentences with entities are selected randomly of train dataset.
+  \item Population size: \textit{1200}
+  \item Number of generations: \textit{1000}
+  \item Number of islands: \textit{8}
+  \item Migration interval: \textit{10 generations}
+  \item Number of sentences: \textit{200 sentences} with entities are selected randomly of train dataset.
 \end{itemize}
 
-For experiment the population is split in 8 islands. Each island has 150 individuals that recognize a person (PER), location (LOC), organization (ORG) or miscenlanius (MISC). The init population is generated with a random positive value in a first chromosome, the rest of the chromosomes will have a value of 0.
+% Metrics
 
-\subsection{sequential algorithm}
+% Preprocessing (tokenization, lemmatization, wordembedding, etc)
 
-The secuential algorithm is implemented in C++ run in debian 11 bullseye. The algorithm is executed in a Ryzen 7 serie 4000 machine with 4 dual cores and 16GB of RAM. The algorithm is executed in 1000 generations and the time is 1039.98 seconds.
+For the experiment, the population is divided into 8 islands. Each island has 150 individuals who recognize a person (PER), location (LOC), organization (ORG), or miscenlanius (MISC). The init population is generated with a positive random value in a first gene, the rest of the genes will have a value of 0. The gene that indicates the entity to be recognized is uniformly distributed in the population.
 
-\subsection{parallel algorithm with OpenMP}
+\subsubsection{sequential algorithm}
 
-The parallel algorithm is implemented in C++ in OS is debian 11 bullseye. The algorithm is executed in a Ryzen 7 serie 4000 machine with 4 dual cores and 16GB of RAM. The algorithm is executed in 1000 generations and the time is measured in seconds. Each threads run in a island and each 10 generations the islands are migrated. The time with 8 threads is 165.76 seconds. The algorithm is executed in 1,2,3,4,5,6 and 8 threads
+The sequential algorithm is implemented in language C++, it run in debian 11 bullseye. The algorithm is executed in a Ryzen 7 serie 4000 processor with 4 dual cores and 16GB of RAM.
 
-\subsection{parallel algorithm with cuda}
+The dataset is represented in 3 data structures: a sentence list, an entity list, and a metadata list.
+The sentence list is modeled as a float type 3-dimensional pointer list of pointers (200x172x3), where each element is a sentence. Each sentence is a list of linguistic features, each linguistic feature is a list of values of float type. The list of entities is modeled as a list of 2-dimensional pointers of type integer (200x172), where is the sequence of entities of a sentence. Each value in the sequence is the index of an entity.
 
-The parallel algorithm is executed in a Tesla T4 GPU with 16GB of RAM. The algorithm is executed in 1000 generations and the time is measured in seconds. This GPU has 40 multiprocessors and each multiprocessor has 64 CUDA cores. The algorithm is executed in 64,128,512,1024,2046 and 4096 threads. The cuda Capability Major/Minor version number is 7.5. Cuda version is 11.2.
+% Description about Implementation,Hardware,Software,API
 
-Each threads run in a set of individuals. The selected function and migrate function runs in parallel. With 4069 threads the time is 11.85 seconds.
+\subsubsection{parallel algorithm with OpenMP}
 
-\subsection{parallel algorithm with MPI}
+The parallel algorithm is implemented in C++ , it runs on a debian 11 bullseye OS. The algorithm runs on a Ryzen 7 4000 series processor with 4 dual cores and 16 GB of RAM. Each island runs on a thread and every 10 generations it is necessary to synchronize the population to perform the migration. The algorithm runs on 1,2,3,4,5,6 and 8 threads. The algorithm runs up to 8 threads because it is the number of cores on the machine and the number of islands used for the experiment. The code is available in github\footnote{https://github.com/jrabag/ga\--lener\--es/tree/main/ga\_ner/utils/cython/}
 
-The parallel algorithm is implemented in C++ in OS is debian 11 bullseye. The algorithm is executed in a cluster formed with 4 machine with 2 dual cores and 4GB of RAM. The algorithm is executed in 1000 generations and the time is measured in seconds. Each core run in a island and each 10 generations the islands are migrated. The time with 8 cores is 362.80 seconds. The algorithm is executed in 1,2,3,4,5,6 and 8 cores
 
-\subsection{RESULTS AND DISCUSSION}
+\subsubsection{parallel algorithm with cuda}
 
-\subsubsection{OpenMP}
+The parallel algorithm is simply implemented in Cuda 11.2, running on Ubuntu OS 18.04.6 LTS with a Tesla T4 GPU and 16GB of RAM. This GPU has 40 multiprocessors and each multiprocessor has 64 CUDA cores. The algorithm ran on 64,128,512,1024,2046 and 4096 threads.
 
-The figure \ref{fig:openmp speed} shows the speedup of the algorithm with respect to the sequential algorithm.
+The sequential and openmp implementation data is flattened to 1 dimension, this data is copied to the GPU memory where algorithm is executed. Each thread run a set of individuals, the best case a thread executes an individual. The fitness function, sharing function, selected function and migrate function runs in parallel, however threads must first be synchronized before executing the next function in the process. The algorithm is executed until 4096 threads because it is the maximum number of individuals that can be generated in training stage, this amount is three times the initial population (3600). The code is available in github\footnote{https://github.com/jrabag/ga\--lener\--en/tree/main/ga\_ner/utils/cuda}. The data is copied to the CPU when the algorithm ends.
 
-\begin{figure}[ht]
-  \caption{Mpi speedup}
+For training, 1 block is used for each multiprocessor, the number of threads per block is calculated with equation\ref{eq:thread_per_block} with the aim of maximizing parallelism both at the thread and multiprocessor level. For the ordering function, a block is used for each island, and for the migration, a block with a thread is used for each island.
+
+\begin{equation}
+  \label{eq:thread_per_block}
+  ceil(\frac{numThreads}{blocksPerGrid})
+\end{equation}
+
+
+\subsubsection{parallel algorithm with MPI}
+
+The parallel algorithm is implemented in C++, it runs on debian 11 bullseye. The algorithm is executed in a cluster made up of 4 machines with 2 dual cores and 4GB of RAM. Both the communication network used for passing messages and the machines are on the Google Cloud Computing platform. The algorithm runs on 1,2,3,4,5,6 and 8 cores. The algorithm runs up to 8 cores because it is the number of slots in the cluster and the number of islands.
+
+Each nucleus travels a group of islands and every 10 generations an individual migrates to the neighboring island in a clockwise direction. For each island assigned to a nucleus, 150 individuals are sent to evolve, so the distribution of the data is not uniform. Individual gathering is done in kernel 0, which receives data from each kernel and stores it in a text file until all kernels finish all iterations. Every 10 generations the threads synchronize to migrate an individual to the neighboring island in a clockwise direction. The code is available at github\footnote{https://github.com/jrabag/ga\--lener\--en/tree/main/ga\_ner/utils/mpi}.
+
+
+\section{RESULTS AND DISCUSSION}
+
+% Compared methods
+
+Execution time is taken from when the initial population is generated until the rules are stored in a file. The execution time is measured in seconds. To evaluate the scalability of the algorithm, speedup\ref{eq:speedup} is used.
+
+% speed up equation%
+\begin{equation}
+  \label{eq:speedup}
+  speedup = \frac{t_{1}}{t_{n}}
+\end{equation}
+
+
+\subsection{OpenMP}
+
+The speedup and execution time results are shown in Table \ref{tab:openmp}, where it can be seen that with 2 threads the time is reduced almost in half. Since they have 8 islands, when work is assigned to a number that is not divisible by 8, performance is no longer proportional to the number of threads allocated. For example, with 3 threads, the speedup is 2.5, which is 0.5 away from the maximum value that can be reached. However with 8 threads, although you should have a speedup closer to 8, as such do with 2 and 4 threads, this is because the computational cost does not fully offset the cost of synchronization.
+%Speed up data [(1, 1.0), (2, 1.9151450447623743), (3, 2.5060519776903307), (4, 3.7249354066606433), (5, 4.586968827467744), (6, 4.965085200562017), (8, 5.670728764478765)]
+
+% Table openmp with 4 decimals%
+
+\begin{table}[h]
   \centering
-  \includegraphics[width=8cm]{img/speep_openmp.png}
-  \label{fig:openmp speed}
-\end{figure}
+  \begin{tabular}{|c|c|c|}
+    \hline
+    \textbf{Number of threads} & \textbf{Speedup} & \textbf{Execution time (Seg)} \\ \hline
+    1                          & 1.0              & 940                           \\
+    2                          & 1.9151           & 491                           \\
+    3                          & 2.5061           & 375                           \\
+    4                          & 3.7249           & 252                           \\
+    5                          & 4.5870           & 204                           \\
+    6                          & 4.9651           & 189                           \\
+    8                          & 5.6707           & 166                           \\ \hline
+  \end{tabular}
+  \caption{Speedup of the algorithm with respect to the sequential algorithm.}
+  \label{tab:openmp}
+\end{table}
 
 
-\subsubsection{Cuda}
+% Efficiency data [(1, 1.0), (2, 0.9575725223811872), (3, 0.8353506592301102), (4, 0.9312338516651608), (5, 0.9173937654935488), (6, 0.8275142000936695), (8, 0.7088410955598456)]
 
-The figure \ref{fig:cuda speed} shows the speedup of the algorithm with respect to the sequential algorithm.
+
+\subsection{Cuda}
+
+The figure \ref{fig:cuda speed} shows the execution time of the algorithm with respect to the sequential algorithm. The results of the speedup and execution time are shown in the table shown in Table \ref{tab:cuda}. In the data you can see, there isn't much difference in speedup between 64 and 128 threads, this being less than when running 4 threads in openmp. Starting at 256, an speedup more proportional to the number of threads is observed because from this point there is a better relationship between the computational load and the synchronization cost.
+
+%Speed up data [(4096, 79.31664723086192), (2048, 34.484143834956846), (1024, 16.84999583312248), (512, 10.321562380469098), (256, 5.665460392158735), (128, 2.983193630682609), (64, 2.007584246546774)]
+
+% Table cuda with 4 decimals%
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|c|c|c|}
+    \hline
+    \textbf{Number of threads} & \textbf{Speedup} & \textbf{Execution time (Seg)} \\ \hline
+    64                         & 2.0076           & 468                           \\
+    128                        & 2.9832           & 315                           \\
+    256                        & 5.6655           & 165                           \\
+    512                        & 10.3216          & 91                            \\
+    1024                       & 16.8500          & 56                            \\
+    2048                       & 34.4841          & 27                            \\
+    4096                       & 79.3166          & 12                            \\ \hline
+  \end{tabular}
+  \caption{Speedup Cuda with respect to the sequential algorithm.}
+  \label{tab:cuda}
+\end{table}
+
+% Efficiency data [(4096, 0.019364415827847148), (2048, 0.016837960856912523), (1024, 0.016455074055783673), (512, 0.020159301524353707), (256, 0.02213070465687006), (128, 0.02330620023970788), (64, 0.031368503852293346)]
 
 \begin{figure}[ht]
+  \centering
+  \includesvg[width=8cm]{img/speedup_cuda.svg}
   \caption{Cuda speedup}
-  \centering
-  \includegraphics[width=8cm]{img/speep_cuda.png}
   \label{fig:cuda speed}
 \end{figure}
 
 \subsubsection{MPI}
 
-The figure \ref{fig:mpi speed} shows the speedup of the algorithm with respect to the sequential algorithm.
+Due to the difference in hardware and network architecture, the speedup comparison uses the value when using a single core as the reference of the sequencing algorithm. The results on speedup and execution time are shown in Table \ref{tab:mpi}
+% Speed up data [(1, 1.0), (2, 1.6719849982419814), (3, 2.42244933537705), (4, 3.394441712536286), (5, 4.228881186044765), (6, 4.732803998761446), (8, 5.898214733615764)]
+
+% Table mpi with 4 decimals%
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|c|c|c|}
+    \hline
+    \textbf{Number of threads} & \textbf{Speedup} & \textbf{Execution time (Seg)} \\ \hline
+    1                          & 1.0              & 2140                          \\
+    2                          & 1.6720           & 1280                          \\
+    3                          & 2.4224           & 883                           \\
+    4                          & 3.3944           & 630                           \\
+    5                          & 4.2289           & 506                           \\
+    6                          & 4.7328           & 452                           \\
+    8                          & 5.8982           & 363                           \\ \hline
+  \end{tabular}
+  \caption{Speedup MPI with respect to the sequential algorithm.}
+  \label{tab:mpi}
+\end{table}
+
+% Efficiency data [(1, 1.0), (2, 0.8359924991209907), (3, 0.80748311179235), (4, 0.8486104281340715), (5, 0.845776237208953), (6, 0.7888006664602409), (8, 0.7372768417019705)]
+
+The figure \ref{fig:mpi speed} shows the speedup relationship between OpenMP and MPI. It can be seen that in terms of acceleration, OpenMP overall has better performance, however, when using 8 threads, MPI performance was better. This is because MPI used a flattened data structure for the array and kernels were only given a part of the individuals to evolve, whereas in OpenMP each thread was given a copy of the entire array, because synchronizing the array in shared memory is more expensive than sending a synchronization message and only sending and receiving an individual. This process that is repeated every 100 times (every 10 generations), although the difference is not great, it can be seen that in the case of 8 threads, the performance of MPI is better.
 
 \begin{figure}[ht]
-  \caption{Mpi speedup}
   \centering
-  \includegraphics[width=8cm]{img/speep_mpi.png}
+  \includesvg[width=8cm]{img/speedup_openmp_vs_mpi.svg}
+  \caption{Mpi speedup}
   \label{fig:mpi speed}
 \end{figure}
 
 
+\subsubsection{Tagging}
 
 To evaluated quality of rules the following metrics are used:
 \begin{itemize}
@@ -333,7 +519,6 @@ To evaluated quality of rules the following metrics are used:
   \item f1-score: Represents the harmonic mean of recall and precision as shown in equation \ref{f1}.
 \end{itemize}
 
-
 \begin{equation}
   \label{recall}
   R = \frac{TP}{TP + FN}
@@ -341,7 +526,7 @@ To evaluated quality of rules the following metrics are used:
 
 \begin{equation}
   \label{f1}
-  F1-Score = \frac{2*P*R}{P + R}
+  F1_{Score} = \frac{2*P*R}{P + R}
 \end{equation}
 
 \begin{equation}
@@ -349,43 +534,70 @@ To evaluated quality of rules the following metrics are used:
   P = \frac{TP}{TP + FP}
 \end{equation}
 
+
+% LOC       0.50      0.55      0.52       284
+% MISC       0.71      0.06      0.11       163
+% O       0.95      0.98      0.97      6101
+% ORG       0.52      0.26      0.35       327
+% PER       0.44      0.56      0.49       231
 \begin{table}[ht]
-  \caption{Traning results}
   \centering
   \begin{tabular}{|c|c|c|c|c|}
     \hline
     \textbf{}     & \textbf{precision} & \textbf{recall} & \textbf{f1-score} \\ \hline
-    \textbf{PER}  & 0.89               & 0.44            & 0.59              \\ \hline
-    \textbf{LOC}  & 0.50               & 0.31            & 0.39              \\ \hline
-    \textbf{ORG}  & 0.71               & 0.17            & 0.28              \\ \hline
-    \textbf{MISC} & 0.90               & 0.17            & 0.28              \\ \hline
+    \textbf{PER}  & 0.44               & 0.56            & 0.49              \\
+    \textbf{MISC} & 0.71               & 0.06            & 0.11              \\
+    \textbf{ORG}  & 0.52               & 0.26            & 0.35              \\
+    \textbf{LOC}  & 0.50               & 0.55            & 0.52              \\ \hline
   \end{tabular}
+  \caption{Traning results}
   \label{tab:results}
 \end{table}
 
 
+% LOC       0.11      0.53      0.18       171
+% MISC       0.13      0.03      0.04       160
+% O       0.99      0.89      0.94      5319
+% ORG       0.41      0.23      0.29       329
+% PER       0.39      0.62      0.48       262
+
 \begin{table}[ht]
-  \caption{validation results}
   \centering
   \begin{tabular}{|c|c|c|c|c|}
     \hline
     \textbf{}     & \textbf{precision} & \textbf{recall} & \textbf{f1-score} \\ \hline
-    \textbf{PER}  & 0.72               & 0.32            & 0.44              \\ \hline
-    \textbf{LOC}  & 0.27               & 0.19            & 0.23              \\ \hline
-    \textbf{ORG}  & 0.43               & 0.10            & 0.16              \\ \hline
-    \textbf{MISC} & 0.32               & 0.03            & 0.06              \\ \hline
+    \textbf{PER}  & 0.39               & 0.62            & 0.48              \\
+    \textbf{MISC} & 0.13               & 0.03            & 0.04              \\
+    \textbf{ORG}  & 0.41               & 0.23            & 0.29              \\
+    \textbf{LOC}  & 0.11               & 0.53            & 0.18              \\ \hline
   \end{tabular}
+  \caption{validation results}
   \label{tab:results_validation}
 \end{table}
+
+% Example rule generated by the algorithm
+%{'label': 'PER', 'pattern': [{'POS': 'PROPN', 'is_entity': True}, {'DEP': 'flat', 'is_entity': True}]}
+% {'label': 'MISC', 'pattern': [{'POS': 'PROPN', 'is_entity': True}]}
+% {'label': 'ORG', 'pattern': [{'POS': 'DET', 'is_entity': False}, {'POS': 'PROPN', 'is_entity': True}, {'POS': 'ADP', 'is_entity': True}, {'DEP': 'flat', 'is_entity': True}]}
+% {'label': 'LOC', 'pattern': [{'POS': 'PROPN', 'is_entity': True}, {'DEP': 'case', 'is_entity': True}, {'POS': 'DET', 'is_entity': True}, {'POS': 'PROPN', 'is_entity': True}]}
+% {'label': 'PER', 'pattern': [{'POS': 'ADP', 'is_entity': False}, {'POS': 'PROPN', 'is_entity': False}, {'POS': 'PUNCT', 'is_entity': True}, {'POS': 'PROPN', 'is_entity': True}, {'POS': 'PROPN', 'is_entity': True}]}
+% {'label': 'MISC', 'pattern': [{'POS': 'PROPN', 'is_entity': True}, {'POS': 'PROPN', 'is_entity': False}, {'DEP': 'flat', 'is_entity': True}]}
+
+% Show the rules generated by the algorithm
+
 
 
 \section{CONCLUSIONS AND FUTURE WORK}
 
-The best acceleration is achieved with the cuda algorithm. This is because a single thread executes the mutation process for an individual, the computation of the fit function. In addition, the selection is executed in parallel, a different case than Open MPI and Open that the tournament is not executed in parallel, since the parallelism is executed at the island level.
+The best acceleration is achieved with the cuda algorithm. This is because a single thread executes the mutation, calculation of the fitness and the migration for an individual, these three functions being the ones that require the most resources to execute. Also, the selection runs in parallel, unlike the Open MPI and Open that the tournament does not run in parallel, since the parallel runs at the island level.
 
-Although the Open MP execution time is better, due to the difference in the characteristics of the machines, the difference in times is understood.
+Better performance can be observed until after 512 threads, before this point it does not present a better OpenMp execution time. The closer the number of threads launched in cuda is to the number of individuals, the better the use of GPU resources. Flattening the data for both nothing and MPI helps reduce the cost of transporting data because all data is located contiguous
 
-Despite Opem MPI having the worst performance in terms of execution time, the truth is that in practice it is one of the best alternatives, since it allows multiple machines to be connected, increasing parallelism that can be limited with Open Mp by the limits of the cores that a machine can reach. It also allows you to combine the parallelism that is offered by both GPU with Cuda or multi-threaded with Open MP
+Despite the fact that Open MPI has the worst performance in terms of execution time, the truth is that in practice it is one of the best alternatives, since it allows connecting multiple machines increasing the parallelism that can be limited with Open Mp by the limits of the cores that a machine can reach. It also allows you to combine the parallelism offered by both GPU with Cuda or multithreading with Open MP.
+
+Part of the performance obtained is in the fact that the majority vote method is widely used, either as a proposal or as a baseline. For future work, a hidden markov chain model could be implemented to perform the unification of the labels emitted by the rules. Models can also be used together with vector representations and have a better understanding, as has been the case in other cases.
+
+Some of the rules are very similar despite predicting rules of other types, this causes a loss in precision, for which Markov models could help to improve the current performance.
 
 
 \bibliographystyle{unsrt}       % APS-like style for physics

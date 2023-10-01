@@ -10,6 +10,7 @@
             },
             "command": "pdflatex",
             "args": [
+                "-shell-escape",
                 "-interaction=nonstopmode",
                 "-file-line-error",
                 "*.tex"

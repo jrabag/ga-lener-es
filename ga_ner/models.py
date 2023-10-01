@@ -24,8 +24,8 @@ class Feature:
     """
 
     def __init__(self, feature: int, value: int):
-        self.feature = feature
-        self.value = value
+        self.feature = int(feature)
+        self.value = int(value)
 
     def __iter__(self):
         yield self.feature
@@ -101,6 +101,36 @@ class Rule:
             arr[i] = item
         return arr
 
+    def to_dict(self, vocab: "Vocabulary", vocab_entities: "Vocabulary"):
+        """Convert to text.
+        label is the entity.
+        pattern is the rule.
+        """
+        features_dict = {
+            0: "POS",
+            1: "DEP",
+            2: "TEXT",
+        }
+
+        inverted_dict = {
+            0: {v: k for k, v in pos_tags.items()},
+            1: {v: k for k, v in dep_tags.items()},
+            2: vocab.inverse(),
+        }
+        vocab_inv = vocab_entities.inverse()
+        return {
+            "label": vocab_inv[self.entity],
+            "pattern": [
+                {
+                    features_dict[token.feature]: inverted_dict[token.feature][
+                        token.value
+                    ],
+                    "is_entity": mask,
+                }
+                for token, mask in zip(self.tokens, self.mask)
+            ],
+        }
+
     @staticmethod
     def from_number_array(array: np.ndarray, score: float = 0.0):
         """Create Rule from numpy array."""
@@ -116,7 +146,7 @@ class Rule:
         return Rule(entity, tokens, mask, score)
 
     def __str__(self):
-        return f"Rule(entity={self.entity}, tokens={self.tokens}, score={self.score})"
+        return f"Rule(entity={self.entity}, tokens={self.tokens}, score={self.score}, mask={self.mask})"
 
     def __repr__(self) -> str:
         return str(self)
@@ -242,6 +272,14 @@ class Vocabulary:
 
     def __iter__(self):
         return iter(self.__map_id)
+
+    def items(self):
+        """Return items."""
+        return self.__map_id.items()
+
+    def inverse(self) -> Dict[int, str]:
+        """Id to string."""
+        return {v: k for k, v in self.__map_id.items()}
 
     @classmethod
     def from_list(cls, strings: List[str], include_special: bool = True):
@@ -438,7 +476,7 @@ class Document:
             feature_list.append(self.global_index_to_feature(abs(array[index])))
 
         return Rule(
-            self.vocab_ent[entity_type],
+            entity_type,
             feature_list,
             array > 0,
             score,
@@ -512,6 +550,13 @@ class Document:
 
         index -= len(dep_tags)
         return Feature(2, index)
+
+    @property
+    def text(self) -> str:
+        """Get text."""
+        for token in self.tokens:
+            print(token[2], self.vocab.inverse()[token[2].value])
+        return " ".join([self.vocab.inverse()[token[2].value] for token in self.tokens])
 
     @cached_property
     def unk_id(self):

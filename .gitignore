@@ -6,3 +6,6 @@ lightning_logs
 **.npy
 Weak**.ipynb
 **Predic**.ipynb
+data/rules
+glove-*.gz
+build
