@@ -12,22 +12,15 @@ The islands model fosters population speciation by creating isolated subpopulati
 
 In the context of this island model proposal, each island utilizes a distinct sentence dataset. Additionally, each island possesses a dataset related to specific features, fostering the convergence of speciation around these features. This niche-based approach enables individuals to exploit the current environmental features effectively. Consequently, dominant versions of an entity can be swiftly eliminated. For example, rules that predominantly identify the entity "person" (\textbf{PER}) might perform poorly on islands where the primary entity in the documents is an "organization" (\textbf{ORG}).
 
-To select the best rules for each generation, firstly the fitness of the rules is calculated based on the RlogF \cite{seman_lex}, then the shared fitness is calculated to reduce competition between individuals with a similar goal and a different solution, thus maintains a more diverse population \cite{goldber_mul}, finally a pseudo-order is applied, where parents compete with their children in a tournament, in order to select the rules with the best fit. The losers of a round can compete with the children of the neighbors. For the selection an elitist approach is used, so the pseudo ordering is allowed to select the individuals with the best fitness between the parents and their offspring, reducing the algorithmic complexity, and in some cases allowing individuals with low performance to be part of the group. the next generation
+To select the best rules for each generation, a series of steps are followed. Firstly, the fitness of the rules is calculated based on the RlogF metric \cite{seman_lex}. Then, shared fitness is computed to reduce competition between individuals with similar goals and different solutions, thereby maintaining a more diverse population \cite{goldber_mul}. Finally, a pseudo-ordering mechanism is applied. In this process, parents compete with their offspring in a tournament-style fashion to select the rules with the best fitness. The losers of a round may also have a chance to compete with the children of their neighbors. This approach employs an elitist strategy for selection, allowing the pseudo-ordering to choose individuals with the best fitness among both parents and offspring. This not only simplifies the algorithmic complexity but also, in some cases, allows individuals with lower performance to be included in the next generation.
 
-The majority system is used to tag the span entity, where each rule emit a vote for the category of span entity according its precision obtained in the training phase. The span entity is tagged with the category that has the most votes.
+The model is trained on the CoNLL 2002 dataset \cite{tjong-kim-sang-2002-introduction}. The majority system is used for tagging the span entity, where each rule emits a vote for the category of the span entity based on its precision obtained during the training phase. The span entity is then tagged with the category that receives the most votes.
 
-The method is trained on the CoNLL 2002 \cite{tjong-kim-sang-2002-introduction} dataset. The method is implemented in several parallel architectures and the results show its scalability for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures. The results show that the method is capable of learning rules of moderate precision.
-
-The major contributions of this work are:
+The major contributions of this work are as follows:
 \begin{itemize}
   \item The proposed method can learn syntactic rules for NER using a small amount of labeled data.
-  \item The proposed method is scalable for shared (OpenMP), hybrid (GPU) and distributed (MPI) memory architectures.
-  \item The patterns learned by the proposed method can be detect linguistic features around the entity.
+  \item The patterns learned by the proposed method can detect linguistic features around the entity.
 \end{itemize}
-
-The code of the proposed method and data is realease for future research\footnote{https://github.com/jrabag/ga\--lener\--es/}. The rest of the paper is organized as follows:
-In section 2 the related work. In section 3 the method is presented.
-In section 4 the expetimental setup. In section 5 the results are showed. In section 6 the conclusions.
 
 
 \section{Background}
@@ -99,31 +92,19 @@ When creating or modifying a gene, a linguistic feature is first selected, then 
 
 \subsection{Fitness function}
 
-Fitness \ref{fitness_eq} is calculated based on the document mean for the RlogF metric (\ref*{RlogF_eq})\cite{seman_lex} on each of the islands. This calculation is made after performing the mutation operation on each individual.
-
-
-\begin{equation}
-  \label{RlogF_eq}
-  RlogF(Ind) = \frac{F_i}{N_i} {\log_2}({F_i})
-\end{equation}
-
-\begin{equation}
-  \label{RlogF_eq2}
-  RlogF(i,\alpha,\beta) = \alpha\frac{F_i}{N_i} + \beta{\log_2}({F_i})
-\end{equation}
+Fitness \ref{fitness_eq} is calculated based on the document mean for the RlogF metric\cite{seman_lex} on each of the islands. This calculation is made after performing the mutation operation on each individual.
 
 \begin{equation}
   \label{fitness_eq}
-  fitness(r) = \frac{1}{N} \sum_{i=1}^{N} RlogF(r_i)
+  fitness(individual_i) = \frac{F_i}{N_i} {\log_2}({F_i})
 \end{equation}
 
-The RlogF metric is a weighted conditional probability, where the pattern is scored high if a high percentage of its extractions are members of category\cite{seman_lex}, where ${F_i}$ is the number of intervals successfully extracted for the feature,
-and ${ N_i}$ is the number of spans extracted for the feature. The factor ${\log_2}({F_i})$ represents the ability of the rule to cover more spans \cite{tallor}.
+The RlogF metric is a weighted conditional probability, where the pattern is scored high if a high percentage of its extracted span are members of ${category_i}$\cite{seman_lex}, where ${F_i}$ is the number of span successfully extracted for a ${category_i}$ and ${ N_i}$ is the total of spans extracted for the ${individual_i}$. The factor ${\log_2}({F_i})$ represents the ability of the rule to cover more spans \cite{tallor}.
 
-The share function \ref{shared_eq} is computed after the fitness function. Both parents and children are taken to measure the cosine distance between individuals, taking from 2 tokens to 10 tokens. \ref{shared_eq_ind} is calculated on each island to maintain diversity in its population.
+The share function \ref{shared_eq} is computed after the fitness function. Both parents and children are taken to measure the cosine distance\ref{eq:cosine_distance} between individuals, taking that represent features in embedding vector. \ref{shared_eq_ind} is calculated on each island to maintain diversity in its population.
 
 \begin{equation}
-  \label{cosine_distance}
+  \label{eq:cosine_distance}
   d(a, b) = 1- \frac{a \cdot b}{\|a\| \|b\|}
 \end{equation}
 
@@ -137,15 +118,6 @@ The share function \ref{shared_eq} is computed after the fitness function. Both 
   \end{array}
   \right \}
 \end{equation}
-
-$$
-  \text{f}^{d_{t}}_{i}(\alpha,\beta) =
-  \alpha \text{ precision} + \beta \text{ seq}^{d_{t}}_{i}
-$$
-
-$$
-  \text{ seq}^{d_{t}}_{i} = \frac{\text{similarity\_accumulator}}{\text{total\_matches}} + \frac{\log_2(\text{individual\_size})}{\log_2(7)}
-$$
 
 
 \begin{equation}
@@ -209,6 +181,86 @@ Majory votes to tagged a entity span. The entity type is the one that has the hi
 The majority voting system is used to label a range of functions. The entity type is the one with the highest number of votes, where the confidence of each vote is determined by the accuracy of the rule obtained after training. If there is a tie, the entity type is randomly selected.
 
 The entity span that has been voted as an entity is assigned if the weighted sum of the votes is greater than the threshold. The threshold is the maximum between 0.5 and the sum of half the votes. If the sum of the votes is less than the threshold, the entity is not assigned.
+
+% Applying Logical Rules
+% At each iteration, we apply both seed and learned
+% logical rules to unlabeled entity candidates to obtain a set of weakly labeled instances. In case an
+% entity candidate is matched by multiple rules (potentially conflicting), we use the majority vote as
+% the final weak label.
+% Entity Candidates. In this work, we treat tagging
+% as a span labeling task as described earlier. Before our learning process, we enumerate all token
+% spans up to a maximum length from unlabeled data
+% as entity candidates. We also notice that common
+% phrases (e.g., “United States”) are rarely split into
+% different entities (e.g. “United”, “States”). Therefore, we generate a list of common phrases using
+% the unsupervised AutoPhrase method (Shang et al.,
+% 2018a) and merge two continuous spans together as
+% a single entity candidate if they can form a common
+% phrase \cite{tallor}
+
+% \subsection{Logical Rule Extraction}
+% At each iteration, we apply both seed and learned
+% logical rules to unlabeled entity candidates to obtain a set of weakly labeled instances. In case an
+% entity candidate is matched by multiple rules (potentially conflicting), we use the majority vote as
+% the final weak label. \cite{tallor}
+
+\subsection{ Document Selection}
+
+% Instance Embedding. We compute the embedding of an entity instance as the mean of the embeddings of its tokens. 
+
+% Local Score. Given a weakly labeled instance eq
+% and an example ei from the high-precision set, we
+% first compute their similarity as the cosine score
+% between their embeddings. Then, we compute the
+% local confidence score of eq belonging to category
+% i as the maximum of its similarities between all
+% examples in the high-precision set.
+% Global Score. The local score is estimated based
+% on a single instance in the high-precision set.
+% Though it can help explore new entities, it can also
+% be inaccurate in some cases. Therefore, we propose
+% to compute a more reliable score to estimate the
+% accuracy of an instance eq belonging to a category
+% i, which is called the global score. Specifically, we
+% first sample a small set Es from the high precision
+% set Hi and then compute the prototypical embedding xEs of Es as the average of embeddings of all
+% instances in Es. In our work, we sample N times
+% and compute the global score as:
+% score
+% glb
+% i =
+% 1
+% N
+% X
+% 1≤j≤N
+% cos(x
+% j
+% Es
+% , xeq
+% ) (1)
+% To balance the exploration ability and reliability,
+% we compute the final confidence score of a weakly
+% labeled instance belonging to a category as the
+% geometric mean of its local and global scores.
+% Dynamic Threshold Estimation. We hypothesize
+% that different categories of entities may have different thresholds for selecting high-quality weak
+% labels. We may also need to use different thresholds at different iterations to dynamically balance
+% exploration and reliability. For example, we may
+% expect our learning process to be reliable at earlier iterations and be exploratory at later stages.
+% Motivated by this hypothesis, we propose to use
+% a dynamic threshold to select high-quality weak
+% labels. Specifically, we hold out one entity instance
+% in the high precision set and compute its confidence
+% score with respect to the rest of the examples in the
+% high-precision set. We randomly repeat T times
+% and use the minimum value as the threshold. For
+% category i, it is calculated as:
+% threshold = τ · min
+% k≤T,ek∈Hi
+% scorei(ek) (2)
+% where ek is the held-out entity instance and τ ∈
+% [0, 1] is a temperature to control the final threshold.
+
 
 %Sample of matrix%
 
