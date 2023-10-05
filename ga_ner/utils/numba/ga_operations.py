@@ -276,7 +276,7 @@ def select(
     """
 
     # Group individuals by cosine similarity
-    num_members: np.ndarray = np.zeros(
+    sharing: np.ndarray = np.zeros(
         population.shape[0] + offspring_population.shape[0], dtype=np.float64
     )
     population[:, 1] = -100
@@ -297,16 +297,16 @@ def select(
                 population2[index],
                 population2[index2],
             )
-            if simil > threshold:
-                num_members[index] += simil
+            if simil >= threshold:
+                sharing[index] += 1 - ((1 - simil) / (1 - threshold))
 
         for index2 in range(0, offspring_population.shape[0]):
             simil = cosine_similarity(
                 population2[index],
                 offspring_population2[index2],
             )
-            if simil > threshold:
-                num_members[index] += simil
+            if simil >= threshold:
+                sharing[index] += 1 - ((1 - simil) / (1 - threshold))
 
     offset = population.shape[0]
     for index in range(offspring_population.shape[0]):
@@ -315,20 +315,20 @@ def select(
                 offspring_population2[index],
                 offspring_population2[index2],
             )
-            if simil > threshold:
-                num_members[index + offset] += simil
+            if simil >= threshold:
+                sharing[index + offset] += 1 - ((1 - simil) / (1 - threshold))
 
         for index2 in range(population.shape[0]):
             simil = cosine_similarity(
                 offspring_population2[index],
                 population2[index2],
             )
-            if simil > threshold:
-                num_members[index + offset] += simil
+            if simil >= threshold:
+                sharing[index + offset] += 1 - ((1 - simil) / (1 - threshold))
 
-    population_fitness[:] = population_fitness[:] / num_members[: population.shape[0]]
+    population_fitness[:] = population_fitness[:] / sharing[: population.shape[0]]
     offspring_population_fitness[:] = (
-        offspring_population_fitness[:] / num_members[population.shape[0] :]
+        offspring_population_fitness[:] / sharing[population.shape[0] :]
     )
 
     best_generation(
@@ -393,7 +393,7 @@ def fitness_by_individual(
     if retrieve == 0:
         return 0
     # return individual[2]
-    return tp / union  # * np.log2(tp)
+    return tp / retrieve * np.log2(tp)
     # if perfomance_doc[perfomance_doc >= 0].mean() > 1:
     #     print(perfomance_doc[perfomance_doc >= 0].mean())
     # filter_perfomance_doc = perfomance_doc >= 0
